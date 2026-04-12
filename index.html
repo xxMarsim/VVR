@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Victoria VR — On-Chain Intelligence v2</title>
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   DESIGN SYSTEM
+   ═══════════════════════════════════════════════════════════════ */
+:root {
+  --bg: #07090f;
+  --panel: #0b1018;
+  --border: #1a2535;
+  --accent: #3b82f6;
+  --accent2: #8b5cf6;
+  --green: #22c55e;
+  --red: #ef4444;
+  --yellow: #f59e0b;
+  --text: #dde6f5;
+  --muted: #64748b;
+  --card: #0d1320;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; min-height: 100vh; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ── Header ── */
+.header {
+  position: sticky; top: 0; z-index: 100;
+  background: linear-gradient(135deg, #0a0e18 0%, #12101f 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 20px;
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+}
+.logo {
+  width: 34px; height: 34px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 900; font-size: 15px; color: white; flex-shrink: 0;
+}
+.header-title { font-size: 16px; font-weight: 700; }
+.header-sub { font-size: 10px; color: var(--muted); margin-top: 1px; }
+.header-right { margin-left: auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.status-dot.ok { background: var(--green); box-shadow: 0 0 8px var(--green); }
+.status-dot.err { background: var(--red); box-shadow: 0 0 8px var(--red); }
+.status-label { font-size: 10px; color: var(--muted); }
+.btn {
+  background: #132238; color: #7eb8f7; border: 1px solid #2a4a6a;
+  border-radius: 6px; padding: 6px 14px; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all .15s;
+}
+.btn:hover { background: #1a3a5a; border-color: #4a7aaa; }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+.toggle-label { font-size: 10px; color: var(--muted); display: flex; align-items: center; gap: 4px; cursor: pointer; user-select: none; }
+.toggle-label input { accent-color: var(--accent); }
+#lastUpdated { font-size: 10px; color: var(--muted); min-width: 130px; text-align: right; }
+
+/* ── Alert Banner ── */
+.alert-banner {
+  max-width: 1280px; margin: 12px auto 0; padding: 10px 16px;
+  border-radius: 8px; font-size: 12px; font-weight: 600; display: none;
+  align-items: center; gap: 8px;
+}
+.alert-banner.red { display: flex; background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.3); color: var(--red); }
+.alert-banner.yellow { display: flex; background: rgba(245,158,11,.1); border: 1px solid rgba(245,158,11,.25); color: var(--yellow); }
+.alert-banner.green { display: flex; background: rgba(34,197,94,.1); border: 1px solid rgba(34,197,94,.25); color: var(--green); }
+
+/* ── Tabs ── */
+.container { max-width: 1280px; margin: 0 auto; padding: 16px 20px 40px; }
+.tabs {
+  display: flex; gap: 4px; margin-bottom: 18px;
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+  position: sticky; top: 58px; z-index: 90;
+  background: var(--bg); padding: 8px 0;
+}
+.tab {
+  padding: 7px 16px; border-radius: 6px; cursor: pointer;
+  background: var(--panel); border: 1px solid var(--border);
+  color: var(--muted); font-size: 12px; font-weight: 600;
+  transition: all .2s; white-space: nowrap; flex-shrink: 0;
+}
+.tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.tab:hover:not(.active) { border-color: var(--accent); color: var(--text); }
+.tab .badge-count {
+  display: inline-block; min-width: 16px; text-align: center;
+  padding: 0 5px; border-radius: 8px; font-size: 10px; margin-left: 4px;
+  background: rgba(239,68,68,.25); color: var(--red);
+}
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* ── Cards & Grid ── */
+.grid { display: grid; gap: 12px; margin-bottom: 18px; }
+.g4 { grid-template-columns: repeat(4, 1fr); }
+.g3 { grid-template-columns: repeat(3, 1fr); }
+.g2 { grid-template-columns: repeat(2, 1fr); }
+@media (max-width: 900px) { .g4 { grid-template-columns: repeat(2,1fr); } }
+@media (max-width: 600px) { .g4,.g3,.g2 { grid-template-columns: 1fr; } }
+
+.card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 10px; padding: 14px 16px;
+}
+.card-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+.card-value { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.card-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+.change { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; margin-top: 6px; }
+.up { background: rgba(34,197,94,.15); color: var(--green); }
+.down { background: rgba(239,68,68,.15); color: var(--red); }
+
+/* ── Panels ── */
+.panel {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 10px; overflow: hidden; margin-bottom: 14px;
+}
+.panel-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px; border-bottom: 1px solid var(--border);
+}
+.panel-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.dot-out { background: #f0b90b; box-shadow: 0 0 6px #f0b90b88; }
+.dot-in { background: var(--green); box-shadow: 0 0 6px rgba(34,197,94,.5); }
+.dot-purple { background: var(--accent2); box-shadow: 0 0 6px rgba(139,92,246,.5); }
+.dot-blue { background: var(--accent); box-shadow: 0 0 6px rgba(59,130,246,.5); }
+.panel-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; flex: 1; }
+.panel-badge { font-size: 10px; color: var(--muted); font-weight: 600; }
+
+/* ── Table ── */
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; padding: 8px 12px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); border-bottom: 1px solid var(--border); }
+td { padding: 9px 12px; border-bottom: 1px solid rgba(26,37,53,.4); font-size: 12px; vertical-align: middle; }
+tr:hover td { background: rgba(59,130,246,.03); }
+.mono { font-family: 'SF Mono', 'Cascadia Code', monospace; font-size: 11px; }
+.addr-link { color: var(--accent); font-family: monospace; font-size: 11px; }
+.addr-link:hover { color: #93c5fd; }
+.copy-btn {
+  display: inline-block; cursor: pointer; font-size: 11px; color: var(--muted);
+  margin-left: 3px; opacity: 0; transition: opacity .15s;
+}
+tr:hover .copy-btn, .wallet-row:hover .copy-btn { opacity: 1; }
+
+/* ── Labels ── */
+.lbl {
+  display: inline-block; padding: 1px 6px; border-radius: 3px;
+  font-size: 9px; font-weight: 700; letter-spacing: .03em; white-space: nowrap;
+}
+.lbl-ntt { background: #1a0f2a; color: #9977cc; }
+.lbl-mexc { background: #1a2a1a; color: #4dbb77; }
+.lbl-account { background: #1a2210; color: #88cc66; }
+.lbl-deployer { background: #2a1a0a; color: #cc8844; }
+.lbl-mev { background: #2a0a1a; color: #cc4488; }
+.lbl-pool { background: #0a1a2a; color: #4488cc; }
+.lbl-unknown { background: #1a1a1a; color: #556; }
+
+/* ── Tx List (Bridge) ── */
+.tx-scroll { max-height: 520px; overflow-y: auto; }
+.tx-scroll::-webkit-scrollbar { width: 4px; }
+.tx-scroll::-webkit-scrollbar-track { background: var(--bg); }
+.tx-scroll::-webkit-scrollbar-thumb { background: #2a3a50; border-radius: 2px; }
+.tx-row {
+  padding: 8px 14px; border-bottom: 1px solid #0f1620;
+  display: grid; grid-template-columns: 80px 1fr auto; gap: 6px;
+  align-items: start; transition: background .1s;
+}
+.tx-row:hover { background: #0e1825; }
+.tx-time { font-size: 10px; color: #4a6080; font-family: monospace; }
+.tx-time .tx-date { color: #334; font-size: 9px; }
+.tx-amount { font-size: 13px; font-weight: 700; margin-bottom: 2px; }
+.tx-amount.out { color: #f0b90b; }
+.tx-amount.in { color: var(--green); }
+.tx-addr { font-size: 10px; color: #445; display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin-bottom: 1px; }
+.tx-hash-link { font-size: 9px; color: #334; font-family: monospace; }
+.tx-hash-link:hover { color: #5588bb; }
+.tx-right { text-align: right; font-size: 10px; }
+.tx-usd { color: var(--muted); font-weight: 600; }
+.tx-flag { margin-top: 2px; }
+
+/* ── Anomaly ── */
+.anomaly-item {
+  display: flex; gap: 10px; padding: 10px 14px;
+  border-bottom: 1px solid rgba(26,37,53,.4); align-items: flex-start;
+}
+.anomaly-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+.anomaly-body { flex: 1; min-width: 0; }
+.anomaly-title { font-size: 12px; font-weight: 700; margin-bottom: 2px; }
+.anomaly-desc { font-size: 11px; color: var(--muted); }
+.anomaly-meta { font-size: 10px; color: var(--muted); margin-top: 3px; }
+.anomaly-link { font-size: 10px; }
+
+/* ── Wallet Watch ── */
+.wallet-row {
+  display: flex; align-items: center; gap: 10px; padding: 8px 14px;
+  border-bottom: 1px solid rgba(26,37,53,.4); font-size: 12px;
+}
+.wallet-row:hover { background: rgba(59,130,246,.03); }
+.wallet-name { font-weight: 700; min-width: 140px; }
+.wallet-bal { font-weight: 700; font-variant-numeric: tabular-nums; margin-left: auto; }
+
+/* ── Skeleton Loading ── */
+.skel { background: linear-gradient(90deg, #0f1828 25%, #152030 50%, #0f1828 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 4px; }
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+.skel-line { height: 14px; margin-bottom: 8px; }
+.skel-card { height: 70px; }
+
+/* ── Filter Bar ── */
+.filter-bar { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+.filter-btn {
+  padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 600;
+  cursor: pointer; border: 1px solid var(--border); background: var(--panel); color: var(--muted);
+  transition: all .15s;
+}
+.filter-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(59,130,246,.1); }
+.filter-btn:hover:not(.active) { border-color: var(--accent); }
+
+/* ── Sparkline ── */
+.sparkline-wrap { height: 50px; margin-top: 6px; }
+.sparkline-wrap canvas { width: 100%; height: 100%; }
+
+/* ── Print/Export ── */
+.export-btn { font-size: 11px; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     HEADER
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="header">
+  <div class="logo">VR</div>
+  <div>
+    <div class="header-title">Victoria VR — On-Chain Intelligence v2</div>
+    <div class="header-sub">ETH + BSC Bridge · Whale Tracker · NFT Land · Anomaly Detection</div>
+  </div>
+  <div class="header-right">
+    <label class="toggle-label"><input type="checkbox" id="autoRefresh"> Auto 5m</label>
+    <button class="btn" id="btnRefresh" onclick="refreshAll()">⟳ Refresh</button>
+    <div class="status-dot ok" id="statusDot"></div>
+    <span class="status-label" id="statusLabel">Ready</span>
+    <span id="lastUpdated">—</span>
+  </div>
+</div>
+
+<div id="alertBanner" class="alert-banner"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     MAIN CONTAINER
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="container">
+  <div class="tabs" id="tabsNav">
+    <div class="tab active" data-tab="overview">Přehled</div>
+    <div class="tab" data-tab="bridge">Bridge Monitor</div>
+    <div class="tab" data-tab="whales">Whale Tracker</div>
+    <div class="tab" data-tab="nft">NFT Land</div>
+    <div class="tab" data-tab="alerts">Anomaly Log <span class="badge-count" id="alertCount" style="display:none">0</span></div>
+  </div>
+
+  <!-- ═══════ TAB 1: OVERVIEW ═══════ -->
+  <div class="tab-content active" id="tab-overview">
+    <div class="grid g4" id="overviewCards">
+      <div class="card"><div class="card-label">VR Cena</div><div class="card-value" id="ovPrice">—</div><div id="ovChange"></div><div class="card-sub" id="ovPriceSub"></div></div>
+      <div class="card"><div class="card-label">24h Objem</div><div class="card-value" id="ovVol">—</div><div class="card-sub" id="ovVolSub"></div></div>
+      <div class="card"><div class="card-label">Market Cap</div><div class="card-value" id="ovMcap">—</div></div>
+      <div class="card"><div class="card-label">NTT Manager Balance</div><div class="card-value" id="ovNtt">—</div><div class="card-sub">Locked in bridge (ETH)</div></div>
+    </div>
+    <div class="grid g3">
+      <div class="card"><div class="card-label">Bridge Dnes — Outflow</div><div class="card-value" id="ovBridgeOut">—</div><div class="card-sub" id="ovBridgeOutSub"></div></div>
+      <div class="card"><div class="card-label">Bridge Dnes — Inflow</div><div class="card-value" id="ovBridgeIn">—</div><div class="card-sub" id="ovBridgeInSub"></div></div>
+      <div class="card"><div class="card-label">Největší Dávka Dnes</div><div class="card-value" id="ovBigBatch">—</div><div class="card-sub" id="ovBigBatchSub"></div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><div class="panel-dot dot-blue"></div><div class="panel-title">7-Day Price Sparkline</div></div>
+      <div style="padding: 14px;">
+        <div class="sparkline-wrap"><canvas id="sparkCanvas"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ TAB 2: BRIDGE MONITOR ═══════ -->
+  <div class="tab-content" id="tab-bridge">
+    <div class="grid g4" id="bridgeSummary">
+      <div class="card"><div class="card-label">Outflow (ETH→BSC)</div><div class="card-value c-out" id="brOut" style="color:#f0b90b">—</div><div class="card-sub" id="brOutSub"></div></div>
+      <div class="card"><div class="card-label">Inflow (BSC→ETH)</div><div class="card-value c-in" id="brIn" style="color:var(--green)">—</div><div class="card-sub" id="brInSub"></div></div>
+      <div class="card"><div class="card-label">Net Flow</div><div class="card-value" id="brNet">—</div></div>
+      <div class="card"><div class="card-label">Dávek Dnes</div><div class="card-value" id="brCount" style="color:var(--accent2)">—</div></div>
+    </div>
+    <div class="grid g2">
+      <div class="panel">
+        <div class="panel-head"><div class="panel-dot dot-out"></div><div class="panel-title">ETH → BSC (Lock)</div><div class="panel-badge" id="lockCount">—</div></div>
+        <div class="tx-scroll" id="lockList"><div style="padding:20px;text-align:center;color:var(--muted)"><div class="skel skel-line" style="width:80%"></div><div class="skel skel-line" style="width:60%"></div><div class="skel skel-line" style="width:70%"></div></div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><div class="panel-dot dot-in"></div><div class="panel-title">BSC → ETH (Unlock)</div><div class="panel-badge" id="unlockCount">—</div></div>
+        <div class="tx-scroll" id="unlockList"><div style="padding:20px;text-align:center;color:var(--muted)"><div class="skel skel-line" style="width:80%"></div><div class="skel skel-line" style="width:60%"></div><div class="skel skel-line" style="width:70%"></div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ TAB 3: WHALE TRACKER ═══════ -->
+  <div class="tab-content" id="tab-whales">
+    <div class="panel">
+      <div class="panel-head"><div class="panel-dot dot-purple"></div><div class="panel-title">Known Wallet Watch</div></div>
+      <div id="walletWatch"><div style="padding:20px"><div class="skel skel-line" style="width:90%"></div><div class="skel skel-line" style="width:70%"></div><div class="skel skel-line" style="width:80%"></div></div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><div class="panel-dot dot-blue"></div><div class="panel-title">Top VR Holders</div><div class="panel-badge" id="holdersNote">Top 20</div></div>
+      <div class="tbl-wrap" id="holdersTable"><div style="padding:20px"><div class="skel skel-line" style="width:100%"></div><div class="skel skel-line" style="width:90%"></div><div class="skel skel-line" style="width:95%"></div></div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><div class="panel-dot dot-out"></div><div class="panel-title">Recent Large Transfers (&gt;50M VR)</div></div>
+      <div class="tbl-wrap" id="largeTransfers"><div style="padding:20px"><div class="skel skel-line" style="width:100%"></div><div class="skel skel-line" style="width:80%"></div></div></div>
+    </div>
+  </div>
+
+  <!-- ═══════ TAB 4: NFT LAND ═══════ -->
+  <div class="tab-content" id="tab-nft">
+    <div class="grid g4" id="nftOverview">
+      <div class="card"><div class="card-label">Floor Price</div><div class="card-value" id="nftFloor">—</div><div class="card-sub" id="nftFloorUsd"></div></div>
+      <div class="card"><div class="card-label">24h Volume</div><div class="card-value" id="nftVol">—</div></div>
+      <div class="card"><div class="card-label">Total Listings</div><div class="card-value" id="nftListings">—</div></div>
+      <div class="card"><div class="card-label">Holders</div><div class="card-value" id="nftHolders">—</div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><div class="panel-dot dot-blue"></div><div class="panel-title">Recent NFT Sales</div></div>
+      <div class="tbl-wrap" id="nftSales"><div style="padding:20px;text-align:center;color:var(--muted)">Loading NFT data...</div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><div class="panel-dot dot-out"></div><div class="panel-title">VR Land Deployer Activity</div></div>
+      <div class="tbl-wrap" id="deployerActivity"><div style="padding:20px;text-align:center;color:var(--muted)">Loading deployer data...</div></div>
+    </div>
+  </div>
+
+  <!-- ═══════ TAB 5: ANOMALY LOG ═══════ -->
+  <div class="tab-content" id="tab-alerts">
+    <div class="filter-bar">
+      <span style="font-size:11px;color:var(--muted);margin-right:4px">Filter:</span>
+      <div class="filter-btn active" data-filter="all">Vše</div>
+      <div class="filter-btn" data-filter="red">🔴 Kritické</div>
+      <div class="filter-btn" data-filter="yellow">🟡 Varování</div>
+      <div class="filter-btn" data-filter="green">🟢 Info</div>
+      <div class="filter-btn" data-filter="bridge">Bridge</div>
+      <div class="filter-btn" data-filter="whale">Whale</div>
+      <div class="filter-btn" data-filter="nft">NFT</div>
+      <button class="btn export-btn" onclick="exportAlerts()">📥 Export JSON</button>
+    </div>
+    <div class="panel">
+      <div id="anomalyLog"><div style="padding:30px;text-align:center;color:var(--muted)">No anomalies detected yet. Refresh to scan.</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   CONSTANTS & ADDRESSES
+   ═══════════════════════════════════════════════════════════════ */
+const VR_TOKEN = '0x7d5121505149065b562C789A0145eD750e6E8cdD';
+const NTT_MANAGER = '0xC721f339fEC6aFe1C9adFc11E2ad2545aE26eA15';
+const NTT_EXECUTOR = '0xD2D9c936165a85F27a5a7e07aFb974D022B89463';
+const WORMHOLE_ETH = '0x461169e7132bAF37a42aa0CDff597d7FC29D96e5';
+const SMART_ACCOUNT = '0x49719D256A5eA16bFa579ea16E95bea9fa41A452';
+const MEXC_WALLET = '0x9642b23Ed1E01Df1092B92641051881a322F5D4E';
+const VR_DEPLOYER = '0xAe0197E27B6F6DBbcf6CdecD5aB5f1D56FE51859';
+const UNISWAP_POOL = '0x4085cAFb2c519e6bf69Ad410d91dbb6139948366';
+const MEV_BOT = '0xd862CDcfEB856C32B3C4F7563f4811D8Ddfd42e2';
+
+const NTT_BSC = '0xa24C09efbbDd34383fa7E785a0F6234d129A1391';
+const WORMHOLE_BSC = '0x5ca3403f946c666d5ca7f8a75fc87b55cdf514d9';
+
+const BLOCKSCOUT = 'https://eth.blockscout.com/api/v2';
+const ETHERSCAN_URL = 'https://etherscan.io';
+const COINGECKO = 'https://api.coingecko.com/api/v3';
+
+const VR_DECIMALS = 18;
+const VR_TOTAL_SUPPLY = 16_800_000_000;
+
+const KNOWN_WALLETS = {
+  [NTT_MANAGER.toLowerCase()]: { name: 'NTT Manager ETH', cls: 'lbl-ntt' },
+  [NTT_EXECUTOR.toLowerCase()]: { name: 'NTT Executor', cls: 'lbl-ntt' },
+  [WORMHOLE_ETH.toLowerCase()]: { name: 'Wormhole ETH', cls: 'lbl-ntt' },
+  [SMART_ACCOUNT.toLowerCase()]: { name: 'EIP-7702 Account', cls: 'lbl-account' },
+  [MEXC_WALLET.toLowerCase()]: { name: 'MEXC Hot Wallet', cls: 'lbl-mexc' },
+  [VR_DEPLOYER.toLowerCase()]: { name: 'VR Land Deployer', cls: 'lbl-deployer' },
+  [UNISWAP_POOL.toLowerCase()]: { name: 'Uniswap V2 Pool', cls: 'lbl-pool' },
+  [MEV_BOT.toLowerCase()]: { name: 'MEV Bot', cls: 'lbl-mev' },
+  [NTT_BSC.toLowerCase()]: { name: 'NTT Manager BSC', cls: 'lbl-ntt' },
+  [WORMHOLE_BSC.toLowerCase()]: { name: 'Wormhole BSC', cls: 'lbl-ntt' },
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   STATE
+   ═══════════════════════════════════════════════════════════════ */
+let state = {
+  price: null, change24h: null, volume: null, mcap: null,
+  nttBalance: null,
+  bridgeLocks: [], bridgeUnlocks: [],
+  holders: [], largeTransfers: [],
+  nftStats: null, nftSales: [], deployerTxs: [],
+  sparkData: [],
+  apiOk: true
+};
+let autoTimer = null;
+
+/* ═══════════════════════════════════════════════════════════════
+   ANOMALY ENGINE
+   ═══════════════════════════════════════════════════════════════ */
+class AnomalyEngine {
+  constructor() {
+    this.alerts = [];
+    this.idCounter = 0;
+    this.thresholds = {
+      megaBatch: 500_000_000,
+      whaleDump: 200_000_000,
+      exchangeInflow: 50_000_000,
+      nftPanicSell: 0.60,
+      bridgeFrequency: 5,
+      freshWalletThreshold: 30,
+      largeTransfer: 50_000_000,
+    };
+  }
+
+  reset() { this.alerts = []; this.idCounter = 0; }
+
+  add(severity, module, title, description, txHash = null) {
+    this.alerts.push({
+      id: ++this.idCounter,
+      timestamp: new Date().toISOString(),
+      severity, module, title, description, txHash,
+      url: txHash ? `${ETHERSCAN_URL}/tx/${txHash}` : null
+    });
+  }
+
+  analyzeBridge(locks, unlocks, price) {
+    const now = Date.now();
+    const hourAgo = now - 3600000;
+    const today = new Date().toISOString().slice(0, 10);
+
+    // Mega batch check
+    locks.forEach(tx => {
+      const vol = parseVR(tx);
+      if (vol > this.thresholds.megaBatch) {
+        this.add('red', 'bridge', 'Mega Batch Detected',
+          `${fmtNum(vol)} VR ($${fmtNum(vol * (price||0), 0)}) locked to bridge. Verify sender.`,
+          tx.transaction_hash || tx.tx_hash);
+      }
+    });
+
+    // Frequency check
+    const recentLocks = locks.filter(tx => {
+      const t = new Date(tx.timestamp || tx.block_timestamp).getTime();
+      return t > hourAgo;
+    });
+    if (recentLocks.length > this.thresholds.bridgeFrequency) {
+      this.add('yellow', 'bridge', 'High Bridge Frequency',
+        `${recentLocks.length} batches in last hour (threshold: ${this.thresholds.bridgeFrequency})`);
+    }
+
+    // Unknown large sender
+    locks.forEach(tx => {
+      const vol = parseVR(tx);
+      const from = (tx.from?.hash || tx.from_address || '').toLowerCase();
+      if (vol > 100_000_000 && !KNOWN_WALLETS[from]) {
+        this.add('yellow', 'bridge', 'Unknown Large Sender',
+          `${shortAddr(from)} sent ${fmtNum(vol)} VR to bridge`,
+          tx.transaction_hash || tx.tx_hash);
+      }
+    });
+
+    // Return flow check
+    const todayLocks = locks.filter(tx => (tx.timestamp || tx.block_timestamp || '').startsWith(today));
+    const todayUnlocks = unlocks.filter(tx => (tx.timestamp || tx.block_timestamp || '').startsWith(today));
+    const outVol = todayLocks.reduce((s, tx) => s + parseVR(tx), 0);
+    const inVol = todayUnlocks.reduce((s, tx) => s + parseVR(tx), 0);
+    if (outVol > 0 && inVol / outVol > 0.20) {
+      this.add('green', 'bridge', 'Significant Return Flow',
+        `Inflow is ${(inVol/outVol*100).toFixed(1)}% of outflow today (${fmtNum(inVol)} / ${fmtNum(outVol)} VR)`);
+    }
+  }
+
+  analyzeWhales(holders, transfers, price) {
+    // Top 3 holder activity
+    const top3 = holders.slice(0, 3).map(h => (h.address?.hash || '').toLowerCase());
+    transfers.forEach(tx => {
+      const from = (tx.from?.hash || tx.from_address || '').toLowerCase();
+      const vol = parseVR(tx);
+      if (top3.includes(from) && vol > VR_TOTAL_SUPPLY * 0.01) {
+        const label = KNOWN_WALLETS[from]?.name || shortAddr(from);
+        this.add('red', 'whale', 'Top Whale Active',
+          `${label} moved ${fmtNum(vol)} VR (${(vol/VR_TOTAL_SUPPLY*100).toFixed(2)}% supply)`,
+          tx.transaction_hash || tx.tx_hash);
+      }
+    });
+
+    // Exchange inflow
+    transfers.forEach(tx => {
+      const to = (tx.to?.hash || tx.to_address || '').toLowerCase();
+      const vol = parseVR(tx);
+      if (to === MEXC_WALLET.toLowerCase() && vol > this.thresholds.exchangeInflow) {
+        this.add('yellow', 'whale', 'Exchange Inflow — Sell Pressure Watch',
+          `${fmtNum(vol)} VR sent to MEXC ($${fmtNum(vol * (price||0), 0)})`,
+          tx.transaction_hash || tx.tx_hash);
+      }
+    });
+
+    // Unknown dump setup
+    transfers.forEach(tx => {
+      const to = (tx.to?.hash || tx.to_address || '').toLowerCase();
+      const from = (tx.from?.hash || tx.from_address || '').toLowerCase();
+      const vol = parseVR(tx);
+      if (vol > this.thresholds.whaleDump && !KNOWN_WALLETS[from] && (to === MEXC_WALLET.toLowerCase() || to === UNISWAP_POOL.toLowerCase())) {
+        this.add('red', 'whale', 'Potential Dump Setup',
+          `Unknown ${shortAddr(from)} sent ${fmtNum(vol)} VR to ${KNOWN_WALLETS[to]?.name || 'exchange'}`,
+          tx.transaction_hash || tx.tx_hash);
+      }
+    });
+  }
+
+  analyzeNFT(sales, floorPrice) {
+    if (!floorPrice || !sales.length) return;
+
+    // Panic sells
+    sales.forEach(s => {
+      if (s.price && s.price < floorPrice * this.thresholds.nftPanicSell) {
+        this.add('red', 'nft', 'Distress Sale or Manipulation',
+          `Land sold at ${s.price.toFixed(4)} ETH (floor: ${floorPrice.toFixed(4)} ETH, ${(s.price/floorPrice*100).toFixed(0)}%)`,
+          s.txHash);
+      }
+    });
+
+    // Mass seller
+    const sellerCounts = {};
+    sales.forEach(s => { if (s.seller) { sellerCounts[s.seller] = (sellerCounts[s.seller]||0)+1; } });
+    Object.entries(sellerCounts).forEach(([addr, cnt]) => {
+      if (cnt > 5) {
+        this.add('red', 'nft', 'Mass NFT Sell-off',
+          `${shortAddr(addr)} sold ${cnt} Lands — monitor for dump pattern`);
+      }
+    });
+
+    // Volume spike (simplified — compare to average)
+    const totalVol = sales.reduce((s, x) => s + (x.price || 0), 0);
+    if (sales.length > 10 && totalVol > floorPrice * sales.length * 3) {
+      this.add('yellow', 'nft', 'Unusual NFT Volume',
+        `Total volume ${totalVol.toFixed(2)} ETH across ${sales.length} sales`);
+    }
+  }
+}
+
+const engine = new AnomalyEngine();
+
+/* ═══════════════════════════════════════════════════════════════
+   UTILITY FUNCTIONS
+   ═══════════════════════════════════════════════════════════════ */
+async function fetchJ(url, fallback = null) {
+  try {
+    const res = await fetch(url, { headers: { 'Accept': 'application/json' }, signal: AbortSignal.timeout(10000) });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } catch (e) {
+    console.warn(`[API] ${url}`, e.message);
+    return fallback;
+  }
+}
+
+function parseVR(tx) {
+  const raw = tx.total?.value || tx.value || '0';
+  return Number(raw) / 1e18;
+}
+
+function fmtNum(n, dec = 0) {
+  if (n == null || isNaN(n)) return '—';
+  if (n >= 1e9) return (n/1e9).toFixed(1) + 'B';
+  if (n >= 1e6) return (n/1e6).toFixed(1) + 'M';
+  if (n >= 1e3) return (n/1e3).toFixed(1) + 'K';
+  return n.toFixed(dec);
+}
+
+function fmtUsd(n) {
+  if (n == null) return '—';
+  return '$' + fmtNum(n, n < 1 ? 6 : 2);
+}
+
+function shortAddr(a) {
+  if (!a) return '—';
+  return a.slice(0, 6) + '…' + a.slice(-4);
+}
+
+function addrLabel(a) {
+  if (!a) return '';
+  const k = KNOWN_WALLETS[a.toLowerCase()];
+  return k ? `<span class="lbl ${k.cls}">${k.name}</span>` : '';
+}
+
+function etherscanAddr(a) {
+  return `${ETHERSCAN_URL}/address/${a}`;
+}
+function etherscanTx(h) {
+  return `${ETHERSCAN_URL}/tx/${h}`;
+}
+function blockscoutAddr(a) {
+  return `https://eth.blockscout.com/address/${a}`;
+}
+
+function addrHTML(a) {
+  if (!a) return '—';
+  const label = addrLabel(a);
+  return `${label} <a class="addr-link" href="${etherscanAddr(a)}" target="_blank" title="${a}">${shortAddr(a)}</a><span class="copy-btn" onclick="copyAddr('${a}',event)" title="Copy">📋</span>`;
+}
+
+function copyAddr(addr, e) {
+  e?.preventDefault(); e?.stopPropagation();
+  navigator.clipboard.writeText(addr).then(() => {
+    const el = e?.target;
+    if (el) { el.textContent = '✓'; setTimeout(() => el.textContent = '📋', 1200); }
+  });
+}
+
+function timeAgo(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  const utc = d.toISOString().slice(11, 16) + ' UTC';
+  const date = d.toISOString().slice(0, 10);
+  return `<span class="tx-date">${date}</span><br>${utc}`;
+}
+
+function setStatus(ok) {
+  const dot = document.getElementById('statusDot');
+  const lbl = document.getElementById('statusLabel');
+  dot.className = ok ? 'status-dot ok' : 'status-dot err';
+  lbl.textContent = ok ? 'Live' : 'API Error';
+  state.apiOk = ok;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   DATA FETCHING
+   ═══════════════════════════════════════════════════════════════ */
+async function fetchPrice() {
+  const d = await fetchJ(`${COINGECKO}/simple/price?ids=victoria-vr&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&include_market_cap=true`);
+  if (d?.['victoria-vr']) {
+    const v = d['victoria-vr'];
+    state.price = v.usd;
+    state.change24h = v.usd_24h_change;
+    state.volume = v.usd_24h_vol;
+    state.mcap = v.usd_market_cap;
+  }
+}
+
+async function fetchSparkline() {
+  const d = await fetchJ(`${COINGECKO}/coins/victoria-vr/market_chart?vs_currency=usd&days=7&interval=daily`);
+  if (d?.prices) {
+    state.sparkData = d.prices.map(p => p[1]);
+  }
+}
+
+async function fetchNttBalance() {
+  const d = await fetchJ(`${BLOCKSCOUT}/addresses/${NTT_MANAGER}/token-balances`);
+  if (d && Array.isArray(d)) {
+    const vrBal = d.find(t => t.token?.address?.toLowerCase() === VR_TOKEN.toLowerCase());
+    if (vrBal) {
+      state.nttBalance = Number(vrBal.value) / 1e18;
+    }
+  }
+}
+
+async function fetchBridgeLocks() {
+  const d = await fetchJ(`${BLOCKSCOUT}/addresses/${NTT_MANAGER}/token-transfers?token=${VR_TOKEN}&type=ERC-20&limit=50`);
+  if (d?.items) {
+    state.bridgeLocks = d.items.filter(tx => {
+      const to = (tx.to?.hash || '').toLowerCase();
+      return to === NTT_MANAGER.toLowerCase();
+    });
+    state.bridgeUnlocks = d.items.filter(tx => {
+      const from = (tx.from?.hash || '').toLowerCase();
+      return from === NTT_MANAGER.toLowerCase();
+    });
+  }
+}
+
+async function fetchHolders() {
+  const d = await fetchJ(`${BLOCKSCOUT}/tokens/${VR_TOKEN}/holders?limit=20`);
+  if (d?.items) {
+    state.holders = d.items;
+  }
+}
+
+async function fetchLargeTransfers() {
+  const d = await fetchJ(`${BLOCKSCOUT}/tokens/${VR_TOKEN}/transfers?limit=50`);
+  if (d?.items) {
+    state.largeTransfers = d.items.filter(tx => parseVR(tx) > 50_000_000);
+  }
+}
+
+async function fetchNFTStats() {
+  // Try OpenSea first
+  let d = await fetchJ('https://api.opensea.io/api/v2/collections/victoria-vr-land/stats');
+  if (d) {
+    state.nftStats = {
+      floor: d.total?.floor_price ?? d.floor_price ?? null,
+      volume24h: d.total?.volume ?? d.intervals?.[0]?.volume ?? null,
+      listings: d.total?.num_owners ?? null,
+      holders: d.total?.num_owners ?? null,
+    };
+  }
+  // Fallback to CoinGecko
+  if (!state.nftStats || !state.nftStats.floor) {
+    const cg = await fetchJ(`${COINGECKO}/nfts/victoria-vr-land`);
+    if (cg) {
+      state.nftStats = {
+        floor: cg.floor_price?.native_currency ?? null,
+        floorUsd: cg.floor_price?.usd ?? null,
+        volume24h: cg.volume_24h?.native_currency ?? null,
+        listings: cg.total_supply ?? null,
+        holders: cg.number_of_unique_addresses ?? null,
+      };
+    }
+  }
+  if (!state.nftStats) {
+    state.nftStats = { floor: null, volume24h: null, listings: null, holders: null, note: 'NFT data unavailable — API may require key' };
+  }
+}
+
+async function fetchNFTSales() {
+  const d = await fetchJ('https://api.opensea.io/api/v2/events/collection/victoria-vr-land?event_type=sale&limit=20');
+  if (d?.asset_events) {
+    state.nftSales = d.asset_events.map(e => ({
+      time: e.event_timestamp || e.created_date,
+      tokenId: e.nft?.identifier || e.nft?.token_id || '?',
+      price: e.payment?.quantity ? Number(e.payment.quantity) / 1e18 : null,
+      seller: e.seller || e.from_account?.address,
+      buyer: e.buyer || e.to_account?.address,
+      txHash: e.transaction?.hash || null,
+    }));
+  }
+}
+
+async function fetchDeployerActivity() {
+  const d = await fetchJ(`${BLOCKSCOUT}/addresses/${VR_DEPLOYER}/transactions?limit=10`);
+  if (d?.items) {
+    state.deployerTxs = d.items;
+  }
+}
+
+async function fetchWalletBalances() {
+  const watchList = [
+    { addr: MEXC_WALLET, name: 'MEXC Hot Wallet', cls: 'lbl-mexc' },
+    { addr: SMART_ACCOUNT, name: 'EIP-7702 Account', cls: 'lbl-account' },
+    { addr: NTT_MANAGER, name: 'NTT Manager ETH', cls: 'lbl-ntt' },
+    { addr: VR_DEPLOYER, name: 'VR Land Deployer', cls: 'lbl-deployer' },
+    { addr: MEV_BOT, name: 'MEV Bot', cls: 'lbl-mev' },
+    { addr: UNISWAP_POOL, name: 'Uniswap V2 Pool', cls: 'lbl-pool' },
+  ];
+  const results = await Promise.allSettled(
+    watchList.map(async w => {
+      const d = await fetchJ(`${BLOCKSCOUT}/addresses/${w.addr}/token-balances`);
+      let bal = 0;
+      if (d && Array.isArray(d)) {
+        const vrBal = d.find(t => t.token?.address?.toLowerCase() === VR_TOKEN.toLowerCase());
+        if (vrBal) bal = Number(vrBal.value) / 1e18;
+      }
+      return { ...w, balance: bal };
+    })
+  );
+  return results.filter(r => r.status === 'fulfilled').map(r => r.value);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RENDER FUNCTIONS
+   ═══════════════════════════════════════════════════════════════ */
+function renderOverview() {
+  const p = state.price;
+  document.getElementById('ovPrice').textContent = p != null ? `$${p.toFixed(6)}` : '—';
+  const ch = state.change24h;
+  const chEl = document.getElementById('ovChange');
+  if (ch != null) {
+    const cls = ch >= 0 ? 'up' : 'down';
+    chEl.innerHTML = `<span class="change ${cls}">${ch >= 0 ? '+' : ''}${ch.toFixed(2)}%</span>`;
+  }
+  document.getElementById('ovPriceSub').textContent = p ? `CoinGecko live` : '';
+  document.getElementById('ovVol').textContent = state.volume != null ? fmtUsd(state.volume) : '—';
+  document.getElementById('ovMcap').textContent = state.mcap != null ? fmtUsd(state.mcap) : '—';
+  document.getElementById('ovNtt').textContent = state.nttBalance != null ? fmtNum(state.nttBalance) + ' VR' : '—';
+
+  // Bridge summary for today
+  const today = new Date().toISOString().slice(0, 10);
+  const todayLocks = state.bridgeLocks.filter(tx => (tx.timestamp||'').startsWith(today));
+  const todayUnlocks = state.bridgeUnlocks.filter(tx => (tx.timestamp||'').startsWith(today));
+  const outVol = todayLocks.reduce((s, tx) => s + parseVR(tx), 0);
+  const inVol = todayUnlocks.reduce((s, tx) => s + parseVR(tx), 0);
+  document.getElementById('ovBridgeOut').textContent = fmtNum(outVol) + ' VR';
+  document.getElementById('ovBridgeOutSub').textContent = `${todayLocks.length} batches today`;
+  document.getElementById('ovBridgeIn').textContent = fmtNum(inVol) + ' VR';
+  document.getElementById('ovBridgeInSub').textContent = `${todayUnlocks.length} unlocks today`;
+
+  const biggest = todayLocks.reduce((max, tx) => Math.max(max, parseVR(tx)), 0);
+  document.getElementById('ovBigBatch').textContent = biggest > 0 ? fmtNum(biggest) + ' VR' : '—';
+  document.getElementById('ovBigBatchSub').textContent = biggest > 0 ? `$${fmtNum(biggest * (p||0), 0)}` : '';
+
+  // Sparkline
+  drawSparkline();
+}
+
+function drawSparkline() {
+  const canvas = document.getElementById('sparkCanvas');
+  if (!canvas || !state.sparkData.length) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  canvas.style.width = rect.width + 'px';
+  canvas.style.height = rect.height + 'px';
+  ctx.scale(dpr, dpr);
+
+  const data = state.sparkData;
+  const w = rect.width, h = rect.height;
+  const min = Math.min(...data), max = Math.max(...data);
+  const range = max - min || 1;
+  const pad = 4;
+
+  ctx.clearRect(0, 0, w, h);
+  ctx.beginPath();
+  data.forEach((v, i) => {
+    const x = pad + (i / (data.length - 1)) * (w - 2 * pad);
+    const y = h - pad - ((v - min) / range) * (h - 2 * pad);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = data[data.length - 1] >= data[0] ? '#22c55e' : '#ef4444';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Fill under
+  const lastX = pad + (w - 2 * pad);
+  ctx.lineTo(lastX, h);
+  ctx.lineTo(pad, h);
+  ctx.closePath();
+  const grad = ctx.createLinearGradient(0, 0, 0, h);
+  const col = data[data.length - 1] >= data[0] ? '34,197,94' : '239,68,68';
+  grad.addColorStop(0, `rgba(${col},0.15)`);
+  grad.addColorStop(1, `rgba(${col},0)`);
+  ctx.fillStyle = grad;
+  ctx.fill();
+}
+
+function renderBridge() {
+  const locks = state.bridgeLocks;
+  const unlocks = state.bridgeUnlocks;
+  const today = new Date().toISOString().slice(0, 10);
+  const todayL = locks.filter(tx => (tx.timestamp||'').startsWith(today));
+  const todayU = unlocks.filter(tx => (tx.timestamp||'').startsWith(today));
+  const outVol = todayL.reduce((s, tx) => s + parseVR(tx), 0);
+  const inVol = todayU.reduce((s, tx) => s + parseVR(tx), 0);
+
+  document.getElementById('brOut').textContent = fmtNum(outVol) + ' VR';
+  document.getElementById('brOutSub').textContent = state.price ? `$${fmtNum(outVol * state.price, 0)}` : '';
+  document.getElementById('brIn').textContent = fmtNum(inVol) + ' VR';
+  document.getElementById('brInSub').textContent = state.price ? `$${fmtNum(inVol * state.price, 0)}` : '';
+  document.getElementById('brNet').textContent = fmtNum(outVol - inVol) + ' VR';
+  document.getElementById('brNet').style.color = outVol > inVol ? '#f0b90b' : 'var(--green)';
+  document.getElementById('brCount').textContent = todayL.length + todayU.length;
+  document.getElementById('lockCount').textContent = locks.length + ' txs';
+  document.getElementById('unlockCount').textContent = unlocks.length + ' txs';
+
+  document.getElementById('lockList').innerHTML = locks.length ? locks.map(tx => bridgeTxRow(tx, 'out')).join('') : '<div style="padding:20px;text-align:center;color:var(--muted)">No lock transactions found</div>';
+  document.getElementById('unlockList').innerHTML = unlocks.length ? unlocks.map(tx => bridgeTxRow(tx, 'in')).join('') : '<div style="padding:20px;text-align:center;color:var(--muted)">No unlock transactions found</div>';
+}
+
+function bridgeTxRow(tx, dir) {
+  const vol = parseVR(tx);
+  const usd = state.price ? vol * state.price : null;
+  const from = tx.from?.hash || '';
+  const to = tx.to?.hash || '';
+  const addr = dir === 'out' ? from : to;
+  const hash = tx.transaction_hash || tx.tx_hash || '';
+  const ts = tx.timestamp || tx.block_timestamp || '';
+
+  let flag = '';
+  if (vol > 500_000_000) flag = '<div class="tx-flag"><span class="lbl" style="background:rgba(239,68,68,.15);color:var(--red)">🔴 MEGA</span></div>';
+  else if (vol > 200_000_000) flag = '<div class="tx-flag"><span class="lbl" style="background:rgba(245,158,11,.1);color:var(--yellow)">🟡 LARGE</span></div>';
+
+  return `<div class="tx-row">
+    <div class="tx-time">${timeAgo(ts)}</div>
+    <div>
+      <div class="tx-amount ${dir}">${fmtNum(vol)} VR</div>
+      <div class="tx-addr">${addrHTML(addr)}</div>
+      <a class="tx-hash-link" href="${etherscanTx(hash)}" target="_blank">${shortAddr(hash)}</a>
+      ${flag}
+    </div>
+    <div class="tx-right">
+      <div class="tx-usd">${usd != null ? '$'+fmtNum(usd,0) : ''}</div>
+    </div>
+  </div>`;
+}
+
+function renderWhales(walletData) {
+  // Wallet Watch
+  const wwEl = document.getElementById('walletWatch');
+  if (walletData && walletData.length) {
+    wwEl.innerHTML = walletData.map(w => `<div class="wallet-row">
+      <span class="wallet-name"><span class="lbl ${w.cls}">${w.name}</span></span>
+      <a class="addr-link" href="${etherscanAddr(w.addr)}" target="_blank">${shortAddr(w.addr)}</a>
+      <span class="copy-btn" onclick="copyAddr('${w.addr}',event)">📋</span>
+      <span class="wallet-bal">${fmtNum(w.balance)} VR</span>
+      <span style="color:var(--muted);font-size:10px;min-width:80px;text-align:right">${state.price ? '$'+fmtNum(w.balance*state.price,0) : ''}</span>
+      <a href="${etherscanAddr(w.addr)}" target="_blank" style="font-size:10px">↗</a>
+    </div>`).join('');
+  }
+
+  // Holders table
+  const holders = state.holders;
+  const htEl = document.getElementById('holdersTable');
+  if (holders.length) {
+    htEl.innerHTML = `<table><thead><tr><th>#</th><th>Address</th><th>Balance</th><th>% Supply</th><th>USD</th><th></th></tr></thead><tbody>
+    ${holders.map((h, i) => {
+      const addr = h.address?.hash || '';
+      const bal = Number(h.value || 0) / 1e18;
+      const pct = (bal / VR_TOTAL_SUPPLY * 100);
+      return `<tr>
+        <td>${i + 1}</td>
+        <td>${addrHTML(addr)}</td>
+        <td class="mono">${fmtNum(bal)}</td>
+        <td>${pct.toFixed(2)}%</td>
+        <td>${state.price ? '$'+fmtNum(bal*state.price,0) : '—'}</td>
+        <td><a href="${etherscanAddr(addr)}" target="_blank" style="font-size:10px">↗</a></td>
+      </tr>`;
+    }).join('')}
+    </tbody></table>`;
+  } else {
+    htEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">Failed to load holder data</div>';
+  }
+
+  // Large transfers
+  const lt = state.largeTransfers;
+  const ltEl = document.getElementById('largeTransfers');
+  if (lt.length) {
+    ltEl.innerHTML = `<table><thead><tr><th>Time</th><th>From</th><th>To</th><th>Amount</th><th>USD</th><th>Tx</th></tr></thead><tbody>
+    ${lt.map(tx => {
+      const vol = parseVR(tx);
+      const from = tx.from?.hash || '';
+      const to = tx.to?.hash || '';
+      const hash = tx.transaction_hash || tx.tx_hash || '';
+      const ts = tx.timestamp || tx.block_timestamp || '';
+      const d = new Date(ts);
+      const time = d.toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
+      // Categorize direction
+      let direction = '';
+      const toLow = to.toLowerCase();
+      if (toLow === MEXC_WALLET.toLowerCase()) direction = '<span class="lbl" style="background:rgba(239,68,68,.1);color:var(--red)">→ EXCHANGE</span>';
+      else if (toLow === NTT_MANAGER.toLowerCase()) direction = '<span class="lbl" style="background:rgba(245,158,11,.1);color:#f0b90b">→ BRIDGE</span>';
+
+      return `<tr>
+        <td style="font-size:10px;white-space:nowrap">${time}</td>
+        <td>${addrHTML(from)}</td>
+        <td>${addrHTML(to)} ${direction}</td>
+        <td class="mono" style="font-weight:700">${fmtNum(vol)} VR</td>
+        <td>${state.price ? '$'+fmtNum(vol*state.price,0) : '—'}</td>
+        <td><a href="${etherscanTx(hash)}" target="_blank" class="addr-link">${shortAddr(hash)}</a></td>
+      </tr>`;
+    }).join('')}
+    </tbody></table>`;
+  } else {
+    ltEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">No large transfers (&gt;50M VR) in recent data</div>';
+  }
+}
+
+function renderNFT() {
+  const s = state.nftStats;
+  if (s) {
+    document.getElementById('nftFloor').textContent = s.floor != null ? s.floor.toFixed(4) + ' ETH' : '—';
+    document.getElementById('nftFloorUsd').textContent = s.floorUsd ? `$${s.floorUsd.toFixed(2)}` : (s.floor && state.price ? '' : (s.note || ''));
+    document.getElementById('nftVol').textContent = s.volume24h != null ? s.volume24h.toFixed(2) + ' ETH' : '—';
+    document.getElementById('nftListings').textContent = s.listings != null ? fmtNum(s.listings) : '—';
+    document.getElementById('nftHolders').textContent = s.holders != null ? fmtNum(s.holders) : '—';
+  }
+
+  // NFT Sales
+  const sales = state.nftSales;
+  const salesEl = document.getElementById('nftSales');
+  if (sales.length) {
+    salesEl.innerHTML = `<table><thead><tr><th>Time</th><th>Land ID</th><th>Price (ETH)</th><th>USD</th><th>Seller</th><th>Buyer</th><th></th></tr></thead><tbody>
+    ${sales.map(sl => {
+      const ts = sl.time ? new Date(sl.time).toISOString().slice(0, 16).replace('T', ' ') : '—';
+      const belowFloor = s?.floor && sl.price && sl.price < s.floor * 0.6;
+      const rowStyle = belowFloor ? 'background:rgba(239,68,68,.06)' : '';
+      return `<tr style="${rowStyle}">
+        <td style="font-size:10px;white-space:nowrap">${ts}</td>
+        <td>#${sl.tokenId}</td>
+        <td class="mono" style="font-weight:700">${sl.price != null ? sl.price.toFixed(4) : '—'}</td>
+        <td>${sl.price && state.price ? '$'+fmtNum(sl.price * (/*eth price approx*/2500), 0) : '—'}</td>
+        <td>${sl.seller ? addrHTML(sl.seller) : '—'}</td>
+        <td>${sl.buyer ? addrHTML(sl.buyer) : '—'}</td>
+        <td>${belowFloor ? '<span class="lbl" style="background:rgba(239,68,68,.15);color:var(--red)">🔴 BELOW FLOOR</span>' : ''}</td>
+      </tr>`;
+    }).join('')}
+    </tbody></table>`;
+  } else {
+    salesEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">NFT sales data unavailable. OpenSea API may require authentication for this collection.</div>';
+  }
+
+  // Deployer activity
+  const dtxs = state.deployerTxs;
+  const dEl = document.getElementById('deployerActivity');
+  if (dtxs.length) {
+    dEl.innerHTML = `<table><thead><tr><th>Time</th><th>Type</th><th>To</th><th>Method</th><th>Tx</th></tr></thead><tbody>
+    ${dtxs.map(tx => {
+      const hash = tx.hash || '';
+      const ts = tx.timestamp ? new Date(tx.timestamp).toISOString().slice(0, 16).replace('T', ' ') : '—';
+      const to = tx.to?.hash || '';
+      const method = tx.method || tx.decoded_input?.method_id || '—';
+      const isCreate = tx.type === 'contract_creation' || !to;
+      return `<tr${isCreate ? ' style="background:rgba(239,68,68,.05)"' : ''}>
+        <td style="font-size:10px;white-space:nowrap">${ts}</td>
+        <td>${isCreate ? '<span class="lbl" style="background:rgba(239,68,68,.15);color:var(--red)">CONTRACT CREATE</span>' : '<span class="lbl lbl-unknown">TX</span>'}</td>
+        <td>${addrHTML(to)}</td>
+        <td class="mono" style="font-size:10px">${typeof method === 'string' ? method.slice(0, 20) : '—'}</td>
+        <td><a href="${etherscanTx(hash)}" target="_blank" class="addr-link">${shortAddr(hash)}</a></td>
+      </tr>`;
+    }).join('')}
+    </tbody></table>`;
+  } else {
+    dEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">No deployer transactions found</div>';
+  }
+}
+
+function renderAnomalies() {
+  const log = engine.alerts;
+  const el = document.getElementById('anomalyLog');
+  const countEl = document.getElementById('alertCount');
+
+  const redCount = log.filter(a => a.severity === 'red').length;
+  if (redCount > 0) {
+    countEl.textContent = redCount;
+    countEl.style.display = 'inline-block';
+  } else if (log.length > 0) {
+    countEl.textContent = log.length;
+    countEl.style.display = 'inline-block';
+    countEl.style.background = 'rgba(245,158,11,.2)';
+    countEl.style.color = 'var(--yellow)';
+  } else {
+    countEl.style.display = 'none';
+  }
+
+  // Top alert banner
+  const banner = document.getElementById('alertBanner');
+  const topRed = log.find(a => a.severity === 'red');
+  if (topRed) {
+    banner.className = 'alert-banner red';
+    banner.innerHTML = `🔴 <strong>${topRed.title}:</strong> ${topRed.description}`;
+    banner.style.display = 'flex';
+  } else {
+    const topYellow = log.find(a => a.severity === 'yellow');
+    if (topYellow) {
+      banner.className = 'alert-banner yellow';
+      banner.innerHTML = `🟡 <strong>${topYellow.title}:</strong> ${topYellow.description}`;
+      banner.style.display = 'flex';
+    } else {
+      banner.style.display = 'none';
+    }
+  }
+
+  if (!log.length) {
+    el.innerHTML = '<div style="padding:30px;text-align:center;color:var(--muted)">No anomalies detected. All systems nominal.</div>';
+    return;
+  }
+
+  el.innerHTML = log.slice().reverse().map(a => {
+    const icon = a.severity === 'red' ? '🔴' : a.severity === 'yellow' ? '🟡' : '🟢';
+    const modBadge = `<span class="lbl lbl-unknown">${a.module.toUpperCase()}</span>`;
+    return `<div class="anomaly-item" data-severity="${a.severity}" data-module="${a.module}">
+      <div class="anomaly-icon">${icon}</div>
+      <div class="anomaly-body">
+        <div class="anomaly-title">${a.title} ${modBadge}</div>
+        <div class="anomaly-desc">${a.description}</div>
+        <div class="anomaly-meta">${new Date(a.timestamp).toLocaleString('cs-CZ')}${a.url ? ` · <a class="anomaly-link" href="${a.url}" target="_blank">View tx ↗</a>` : ''}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MAIN REFRESH ORCHESTRATOR
+   ═══════════════════════════════════════════════════════════════ */
+async function refreshAll() {
+  const btn = document.getElementById('btnRefresh');
+  btn.disabled = true;
+  btn.textContent = '⟳ Loading…';
+  document.getElementById('statusLabel').textContent = 'Fetching…';
+
+  try {
+    // Phase 1: Price + Bridge (most critical)
+    await Promise.allSettled([
+      fetchPrice(),
+      fetchBridgeLocks(),
+      fetchNttBalance(),
+      fetchSparkline(),
+    ]);
+
+    // Phase 2: Whales + NFT
+    const [walletData] = await Promise.allSettled([
+      fetchWalletBalances(),
+      fetchHolders(),
+      fetchLargeTransfers(),
+      fetchNFTStats(),
+      fetchNFTSales(),
+      fetchDeployerActivity(),
+    ]);
+
+    // Run anomaly engine
+    engine.reset();
+    engine.analyzeBridge(state.bridgeLocks, state.bridgeUnlocks, state.price);
+    engine.analyzeWhales(state.holders, state.largeTransfers, state.price);
+    if (state.nftStats) engine.analyzeNFT(state.nftSales, state.nftStats.floor);
+
+    // Render all tabs
+    renderOverview();
+    renderBridge();
+    renderWhales(walletData.status === 'fulfilled' ? walletData.value : []);
+    renderNFT();
+    renderAnomalies();
+
+    setStatus(true);
+  } catch (e) {
+    console.error('[Refresh]', e);
+    setStatus(false);
+  }
+
+  btn.disabled = false;
+  btn.textContent = '⟳ Refresh';
+  document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString('cs-CZ') + ' UTC';
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TAB NAVIGATION
+   ═══════════════════════════════════════════════════════════════ */
+function initTabs() {
+  const tabs = document.querySelectorAll('.tab[data-tab]');
+  const contents = document.querySelectorAll('.tab-content');
+
+  function activate(id) {
+    tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === id));
+    contents.forEach(c => c.classList.toggle('active', c.id === 'tab-' + id));
+    window.location.hash = id;
+  }
+
+  tabs.forEach(t => t.addEventListener('click', () => activate(t.dataset.tab)));
+
+  // Restore from hash
+  const hash = window.location.hash.slice(1);
+  if (hash && document.getElementById('tab-' + hash)) {
+    activate(hash);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ANOMALY FILTER
+   ═══════════════════════════════════════════════════════════════ */
+function initFilters() {
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const f = btn.dataset.filter;
+      document.querySelectorAll('.anomaly-item').forEach(item => {
+        if (f === 'all') { item.style.display = ''; return; }
+        const sev = item.dataset.severity;
+        const mod = item.dataset.module;
+        item.style.display = (sev === f || mod === f) ? '' : 'none';
+      });
+    });
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   EXPORT
+   ═══════════════════════════════════════════════════════════════ */
+function exportAlerts() {
+  const json = JSON.stringify(engine.alerts, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `vr-anomaly-log-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   AUTO-REFRESH
+   ═══════════════════════════════════════════════════════════════ */
+document.getElementById('autoRefresh').addEventListener('change', function() {
+  if (this.checked) {
+    autoTimer = setInterval(refreshAll, 5 * 60 * 1000);
+  } else {
+    clearInterval(autoTimer);
+    autoTimer = null;
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   INIT
+   ═══════════════════════════════════════════════════════════════ */
+window.addEventListener('resize', () => { if (state.sparkData.length) drawSparkline(); });
+initTabs();
+initFilters();
+refreshAll();
+</script>
+</body>
+</html>
