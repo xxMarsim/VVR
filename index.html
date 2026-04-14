@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Victoria VR — On-Chain Intelligence</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 <style>
 :root{--bg:#07090f;--panel:#0b1018;--border:#1a2535;--accent:#3b82f6;--accent2:#8b5cf6;--green:#22c55e;--red:#ef4444;--yellow:#f59e0b;--text:#dde6f5;--muted:#64748b;--card:#0d1320}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -15,28 +17,27 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .header-title{font-size:15px;font-weight:700}.header-sub{font-size:10px;color:var(--muted);margin-top:1px}
 .header-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.status-dot.ok{background:var(--green);box-shadow:0 0 8px var(--green)}.status-dot.err{background:var(--red);box-shadow:0 0 8px var(--red)}.status-dot.stale{background:var(--yellow);box-shadow:0 0 8px var(--yellow)}
+.status-dot.ok{background:var(--green);box-shadow:0 0 8px var(--green)}
+.status-dot.err{background:var(--red);box-shadow:0 0 8px var(--red)}
+.status-dot.loading{background:var(--yellow);animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 .btn{background:#132238;color:#7eb8f7;border:1px solid #2a4a6a;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s}
 .btn:hover{background:#1a3a5a;border-color:#4a7aaa}.btn:disabled{opacity:.4;cursor:not-allowed}
 .toggle-label{font-size:10px;color:var(--muted);display:flex;align-items:center;gap:3px;cursor:pointer;user-select:none}
 .toggle-label input{accent-color:var(--accent)}
-#lastUpdated{font-size:10px;color:var(--muted);min-width:110px;text-align:right}
+#lastUpdated{font-size:10px;color:var(--muted);min-width:115px;text-align:right}
 #statusLabel{font-size:10px;color:var(--muted)}
-.data-src-badge{font-size:9px;padding:2px 6px;border-radius:3px;font-weight:700;background:rgba(59,130,246,.12);color:var(--accent)}
-.data-src-badge.live{background:rgba(34,197,94,.1);color:var(--green)}
-.data-src-badge.cached{background:rgba(245,158,11,.1);color:var(--yellow)}
 
 .alert-banner{max-width:1280px;margin:10px auto 0;padding:8px 14px;border-radius:8px;font-size:11px;font-weight:600;display:none;align-items:center;gap:6px}
-.alert-banner.sev-red{display:flex;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:var(--red)}
-.alert-banner.sev-yellow{display:flex;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);color:var(--yellow)}
-.alert-banner.sev-green{display:flex;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);color:var(--green)}
+.alert-banner.red{display:flex;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:var(--red)}
+.alert-banner.yellow{display:flex;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);color:var(--yellow)}
 
 .container{max-width:1280px;margin:0 auto;padding:14px 18px 40px}
 .tabs{display:flex;gap:3px;margin-bottom:14px;overflow-x:auto;position:sticky;top:52px;z-index:90;background:var(--bg);padding:6px 0}
 .tab{padding:6px 14px;border-radius:6px;cursor:pointer;background:var(--panel);border:1px solid var(--border);color:var(--muted);font-size:11px;font-weight:600;transition:all .2s;white-space:nowrap;flex-shrink:0}
 .tab.active{background:var(--accent);border-color:var(--accent);color:#fff}
 .tab:hover:not(.active){border-color:var(--accent);color:var(--text)}
-.tab .bcnt{display:inline-block;min-width:14px;text-align:center;padding:0 4px;border-radius:7px;font-size:9px;margin-left:3px;background:rgba(239,68,68,.2);color:var(--red)}
+.bcnt{display:inline-block;min-width:14px;text-align:center;padding:0 4px;border-radius:7px;font-size:9px;margin-left:3px;background:rgba(239,68,68,.2);color:var(--red)}
 .tab-content{display:none}.tab-content.active{display:block}
 
 .grid{display:grid;gap:10px;margin-bottom:14px}
@@ -73,31 +74,24 @@ tr:hover .copy-btn,.wallet-row:hover .copy-btn{opacity:1}
 .lbl-account{background:#1a2210;color:#88cc66}.lbl-deployer{background:#2a1a0a;color:#cc8844}
 .lbl-mev{background:#2a0a1a;color:#cc4488}.lbl-pool{background:#0a1a2a;color:#4488cc}
 .lbl-exchange{background:#1a1a2a;color:#8888cc}.lbl-stake{background:#1a2a2a;color:#44bbbb}
-.lbl-vault{background:#1a1a0a;color:#aaaa44}.lbl-unknown{background:#1a1a1a;color:#556}
-.lbl-wh{background:#1f0a2a;color:#cc77ff}
+.lbl-vault{background:#1a1a0a;color:#aaaa44}.lbl-wh{background:#1f0a2a;color:#cc77ff}
+.lbl-unknown{background:#1a1a1a;color:#556}
 
 .tx-scroll{max-height:500px;overflow-y:auto}
 .tx-scroll::-webkit-scrollbar{width:4px}
 .tx-scroll::-webkit-scrollbar-track{background:var(--bg)}
 .tx-scroll::-webkit-scrollbar-thumb{background:#2a3a50;border-radius:2px}
-.tx-row{padding:7px 12px;border-bottom:1px solid #0f1620;display:grid;grid-template-columns:75px 1fr auto;gap:5px;align-items:start;transition:background .1s}
+.tx-row{padding:7px 12px;border-bottom:1px solid #0f1620;display:grid;grid-template-columns:72px 1fr auto;gap:5px;align-items:start;transition:background .1s}
 .tx-row:hover{background:#0e1825}
-.tx-time{font-size:9px;color:#4a6080;font-family:monospace}.tx-time-date{color:#334;font-size:8px}
+.tx-time{font-size:9px;color:#4a6080;font-family:monospace}.tx-date{color:#334;font-size:8px}
 .tx-amount{font-size:12px;font-weight:700;margin-bottom:2px}.tx-amount.out{color:#f0b90b}.tx-amount.in{color:var(--green)}
 .tx-addr{font-size:9px;color:#445;display:flex;align-items:center;gap:3px;flex-wrap:wrap;margin-bottom:1px}
 .tx-hash-link{font-size:8px;color:#334;font-family:monospace}.tx-hash-link:hover{color:#5588bb}
-.tx-right{text-align:right;font-size:10px}.tx-usd{color:var(--muted);font-weight:600}
 .tx-flag{margin-top:1px}
-
-/* Wormhole / cross-chain section */
-.wh-row{padding:7px 12px;border-bottom:1px solid rgba(26,37,53,.35);display:grid;grid-template-columns:75px 1fr auto;gap:5px;align-items:start}
-.wh-row:hover{background:#0c1420}
-.wh-method{font-size:10px;font-weight:700;color:var(--accent2);margin-bottom:2px}
-.wh-hash{font-size:8px;color:#334;font-family:monospace}
+.tx-usd{color:var(--muted);font-weight:600;font-size:10px}
 
 .anomaly-item{display:flex;gap:8px;padding:8px 12px;border-bottom:1px solid rgba(26,37,53,.35);align-items:flex-start}
 .anomaly-icon{font-size:14px;flex-shrink:0;margin-top:1px}
-.anomaly-body{flex:1;min-width:0}
 .anomaly-title{font-size:11px;font-weight:700;margin-bottom:1px}
 .anomaly-desc{font-size:10px;color:var(--muted)}
 .anomaly-meta{font-size:9px;color:var(--muted);margin-top:2px}
@@ -109,13 +103,17 @@ tr:hover .copy-btn,.wallet-row:hover .copy-btn{opacity:1}
 .skel{background:linear-gradient(90deg,#0f1828 25%,#152030 50%,#0f1828 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:4px}
 @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
 .skel-line{height:12px;margin-bottom:6px}
+.msg-box{padding:20px;text-align:center;color:var(--muted);font-size:12px}
+
+/* Chart period buttons */
+.period-bar{display:flex;gap:4px;margin-bottom:10px;align-items:center}
+.period-btn{padding:3px 9px;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--panel);color:var(--muted);transition:all .15s}
+.period-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(59,130,246,.08)}
+.chart-container{position:relative;height:260px;padding:14px}
 
 .filter-bar{display:flex;gap:5px;margin-bottom:10px;flex-wrap:wrap;align-items:center}
 .filter-btn{padding:3px 8px;border-radius:4px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--panel);color:var(--muted);transition:all .15s}
 .filter-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(59,130,246,.08)}
-.spark-wrap{height:48px;margin-top:4px}.spark-wrap canvas{width:100%;height:100%}
-.msg-box{padding:20px;text-align:center;color:var(--muted);font-size:12px}
-.stale-notice{font-size:10px;color:var(--yellow);background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.15);border-radius:6px;padding:5px 10px;margin-bottom:10px;display:none}
 </style>
 </head>
 <body>
@@ -127,7 +125,6 @@ tr:hover .copy-btn,.wallet-row:hover .copy-btn{opacity:1}
     <div class="header-sub">ETH + BSC Bridge · Wormhole NTT · Whale Tracker · Anomaly Detection</div>
   </div>
   <div class="header-right">
-    <span id="dataSrcBadge" class="data-src-badge">—</span>
     <label class="toggle-label"><input type="checkbox" id="autoRefresh"> Auto 5m</label>
     <button class="btn" id="btnRefresh" onclick="refreshAll()">⟳ Refresh</button>
     <div class="status-dot ok" id="statusDot"></div>
@@ -138,8 +135,6 @@ tr:hover .copy-btn,.wallet-row:hover .copy-btn{opacity:1}
 <div id="alertBanner" class="alert-banner"></div>
 
 <div class="container">
-  <div id="staleNotice" class="stale-notice">⚠ Cached data is more than 20 minutes old. GitHub Actions may not be running yet.</div>
-
   <div class="tabs">
     <div class="tab active" data-tab="overview">Přehled</div>
     <div class="tab" data-tab="bridge">Bridge / NTT</div>
@@ -152,10 +147,10 @@ tr:hover .copy-btn,.wallet-row:hover .copy-btn{opacity:1}
   <!-- OVERVIEW -->
   <div class="tab-content active" id="tab-overview">
     <div class="grid g4">
-      <div class="card"><div class="card-label">VR Price</div><div class="card-value" id="ovPrice">—</div><div id="ovChange"></div><div class="card-sub" id="ovPriceSrc"></div></div>
+      <div class="card"><div class="card-label">VR Price</div><div class="card-value" id="ovPrice">—</div><div id="ovChange"></div><div class="card-sub" id="ovSrc"></div></div>
       <div class="card"><div class="card-label">24h Volume</div><div class="card-value" id="ovVol">—</div></div>
       <div class="card"><div class="card-label">Market Cap</div><div class="card-value" id="ovMcap">—</div></div>
-      <div class="card"><div class="card-label">NTT Manager Balance</div><div class="card-value" id="ovNtt">—</div><div class="card-sub">Locked in bridge (ETH)</div></div>
+      <div class="card"><div class="card-label">NTT Locked (Bridge)</div><div class="card-value" id="ovNtt">—</div><div class="card-sub">ETH side balance</div></div>
     </div>
     <div class="grid g3">
       <div class="card"><div class="card-label">Bridge Outflow (ETH→BSC)</div><div class="card-value" id="ovBrOut">—</div><div class="card-sub" id="ovBrOutSub"></div></div>
@@ -163,8 +158,19 @@ tr:hover .copy-btn,.wallet-row:hover .copy-btn{opacity:1}
       <div class="card"><div class="card-label">Largest Batch</div><div class="card-value" id="ovBig">—</div><div class="card-sub" id="ovBigSub"></div></div>
     </div>
     <div class="panel">
-      <div class="panel-head"><div class="panel-dot dot-blue"></div><div class="panel-title">7-Day Price Sparkline</div></div>
-      <div style="padding:12px"><div class="spark-wrap"><canvas id="sparkCanvas"></canvas></div><div class="card-sub" id="sparkInfo"></div></div>
+      <div class="panel-head"><div class="panel-dot dot-blue"></div><div class="panel-title">Price History</div></div>
+      <div style="padding:12px 14px 6px">
+        <div class="period-bar">
+          <span style="font-size:10px;color:var(--muted);margin-right:4px">Period:</span>
+          <div class="period-btn active" data-days="7">7D</div>
+          <div class="period-btn" data-days="30">30D</div>
+          <div class="period-btn" data-days="90">90D</div>
+          <div class="period-btn" data-days="365">1Y</div>
+          <div class="period-btn" data-days="max">MAX</div>
+          <span id="chartInfo" style="font-size:10px;color:var(--muted);margin-left:8px"></span>
+        </div>
+      </div>
+      <div class="chart-container"><canvas id="priceChart"></canvas></div>
     </div>
   </div>
 
@@ -174,7 +180,7 @@ tr:hover .copy-btn,.wallet-row:hover .copy-btn{opacity:1}
       <div class="card"><div class="card-label">Outflow (Lock → BSC)</div><div class="card-value" id="brOut" style="color:#f0b90b">—</div><div class="card-sub" id="brOutSub"></div></div>
       <div class="card"><div class="card-label">Inflow (Unlock ← BSC)</div><div class="card-value" id="brIn" style="color:var(--green)">—</div><div class="card-sub" id="brInSub"></div></div>
       <div class="card"><div class="card-label">Net Flow</div><div class="card-value" id="brNet">—</div></div>
-      <div class="card"><div class="card-label">Transfers (loaded)</div><div class="card-value" id="brCnt" style="color:var(--accent2)">—</div></div>
+      <div class="card"><div class="card-label">Total Transfers</div><div class="card-value" id="brCnt" style="color:var(--accent2)">—</div></div>
     </div>
     <div class="grid g2">
       <div class="panel">
@@ -192,11 +198,11 @@ tr:hover .copy-btn,.wallet-row:hover .copy-btn{opacity:1}
   <div class="tab-content" id="tab-wormhole">
     <div class="panel">
       <div class="panel-head"><div class="panel-dot dot-purple"></div><div class="panel-title">Wormhole Transceiver (ETH) — Recent Transactions</div></div>
-      <div class="tbl-wrap" id="whTxList"><div class="msg-box">Loading Wormhole data…</div></div>
+      <div class="tbl-wrap" id="whTxList"><div class="msg-box">Loading…</div></div>
     </div>
     <div class="panel">
-      <div class="panel-head"><div class="panel-dot dot-blue"></div><div class="panel-title">NTT Executor — Recent Transactions</div></div>
-      <div class="tbl-wrap" id="nttExecList"><div class="msg-box">Loading NTT Executor data…</div></div>
+      <div class="panel-head"><div class="panel-dot dot-blue"></div><div class="panel-title">NTT Executor — Bridge Batches (from locks)</div></div>
+      <div class="tbl-wrap" id="nttExecList"><div class="msg-box">Loading…</div></div>
     </div>
   </div>
 
@@ -228,9 +234,6 @@ tr:hover .copy-btn,.wallet-row:hover .copy-btn{opacity:1}
       <div class="panel-head"><div class="panel-dot dot-blue"></div><div class="panel-title">VR Land Deployer — Recent Activity</div></div>
       <div class="tbl-wrap" id="deployerTxs"><div class="msg-box">Loading…</div></div>
     </div>
-    <div style="padding:14px;background:rgba(59,130,246,.04);border:1px solid rgba(59,130,246,.12);border-radius:8px;font-size:11px;color:var(--muted);margin-bottom:12px">
-      💡 NFT sales data (OpenSea) requires an API key. Add <code style="color:var(--accent)">OPENSEA_API_KEY</code> to your GitHub repo secrets, then update <code>scripts/fetch-data.js</code> to fetch sales data.
-    </div>
   </div>
 
   <!-- ANOMALY LOG -->
@@ -252,319 +255,372 @@ tr:hover .copy-btn,.wallet-row:hover .copy-btn{opacity:1}
 
 <script>
 /* ─── Constants ─────────────────────────────────────────────── */
-const VR_TOKEN  = '0x7d5121505149065b562C789A0145eD750e6E8cdD';
-const NTT_MGR   = '0xC721f339fEC6aFe1C9adFc11E2ad2545aE26eA15';
-const NTT_EXEC  = '0xD2D9c936165a85F27a5a7e07aFb974D022B89463';
-const WORMHOLE  = '0x461169e7132bAF37a42aa0CDff597d7FC29D96e5';
-const SMART_ACC = '0x49719D256A5eA16bFa579ea16E95bea9fa41A452';
-const MEXC      = '0x9642b23Ed1E01Df1092B92641051881a322F5D4E';
-const DEPLOYER  = '0xAe0197E27B6F6DBbcf6CdecD5aB5f1D56FE51859';
-const UNI_POOL  = '0x4085cAFb2c519e6bf69Ad410d91dbb6139948366';
-const MEV_BOT   = '0xd862CDcfEB856C32B3C4F7563f4811D8Ddfd42e2';
-const SUPPLY    = 16_800_000_000;
-const BS        = 'https://eth.blockscout.com/api/v2';
-const CG        = 'https://api.coingecko.com/api/v3';
-const ES        = 'https://etherscan.io';
+const VR_TOKEN = '0x7d5121505149065b562C789A0145eD750e6E8cdD';
+const NTT_MGR  = '0xC721f339fEC6aFe1C9adFc11E2ad2545aE26eA15';
+const NTT_EXEC = '0xD2D9c936165a85F27a5a7e07aFb974D022B89463';
+const WORMHOLE = '0x461169e7132bAF37a42aa0CDff597d7FC29D96e5';
+const SMART_ACC= '0x49719D256A5eA16bFa579ea16E95bea9fa41A452';
+const MEXC     = '0x9642b23Ed1E01Df1092B92641051881a322F5D4E';
+const DEPLOYER = '0xAe0197E27B6F6DBbcf6CdecD5aB5f1D56FE51859';
+const UNI_POOL = '0x4085cAFb2c519e6bf69Ad410d91dbb6139948366';
+const MEV_BOT  = '0xd862CDcfEB856C32B3C4F7563f4811D8Ddfd42e2';
+const SUPPLY   = 16_800_000_000;
+// NOTE: NO ?limit= params — Blockscout v2 rejects them with HTTP 422
+const BS       = 'https://eth.blockscout.com/api/v2';
+const CG       = 'https://api.coingecko.com/api/v3';
+const ES       = 'https://etherscan.io';
 
 const KNOWN = {};
-[[NTT_MGR,'NTT Manager','lbl-ntt'],[NTT_EXEC,'NTT Executor','lbl-ntt'],
- [WORMHOLE,'Wormhole ETH','lbl-wh'],[SMART_ACC,'EIP-7702 Acc','lbl-account'],
- [MEXC,'MEXC','lbl-mexc'],[DEPLOYER,'VR Deployer','lbl-deployer'],
- [UNI_POOL,'Uni V2 Pool','lbl-pool'],[MEV_BOT,'MEV Bot','lbl-mev']
-].forEach(([a,n,c])=>KNOWN[a.toLowerCase()]={name:n,cls:c});
+[
+  [NTT_MGR, 'NTT Manager', 'lbl-ntt'],
+  [NTT_EXEC,'NTT Executor','lbl-ntt'],
+  [WORMHOLE,'Wormhole ETH','lbl-wh'],
+  [SMART_ACC,'EIP-7702 Acc','lbl-account'],
+  [MEXC,    'MEXC',         'lbl-mexc'],
+  [DEPLOYER,'VR Deployer',  'lbl-deployer'],
+  [UNI_POOL,'Uni V2 Pool',  'lbl-pool'],
+  [MEV_BOT, 'MEV Bot',      'lbl-mev'],
+].forEach(([a,n,c]) => KNOWN[a.toLowerCase()] = {name:n, cls:c});
 
 /* ─── State ─────────────────────────────────────────────────── */
-let D = {
-  price:null,change24h:null,vol24h:null,mcap:null,spark:[],
-  locks:[],unlocks:[],tokenMeta:null,
-  holders:[],transfers:[],wallets:[],
-  wormholeTxs:[],deployerTxs:[],
-  nftStats:null,
-  dataSource:'—', lastFetchAt:null
+let S = {
+  price:null, change24h:null, vol24h:null, mcap:null,
+  locks:[], unlocks:[], tokenMeta:null,
+  holders:[], transfers:[],
+  wallets:[], wormholeTxs:[], deployerTxs:[],
+  chartData:{} // keyed by days: {labels, prices}
 };
-let autoTmr=null;
+let autoTmr = null;
+let priceChart = null;
+let currentDays = '7';
 
 /* ─── Anomaly Engine ────────────────────────────────────────── */
 class AnomalyEngine {
-  constructor(){this.alerts=[];this.id=0}
-  reset(){this.alerts=[];this.id=0}
-  add(sev,mod,title,desc,txHash){
-    this.alerts.push({id:++this.id,timestamp:new Date().toISOString(),
-      severity:sev,module:mod,title,description:desc,
-      txHash:txHash||null,url:txHash?`${ES}/tx/${txHash}`:null});
+  constructor(){ this.alerts=[]; this.id=0; }
+  reset(){ this.alerts=[]; this.id=0; }
+  add(sev, mod, title, desc, txHash){
+    this.alerts.push({id:++this.id, timestamp:new Date().toISOString(),
+      severity:sev, module:mod, title, description:desc,
+      txHash:txHash||null, url:txHash?`${ES}/tx/${txHash}`:null});
   }
-  analyzeBridge(locks,unlocks,price){
-    const vols=locks.map(t=>pVR(t)).filter(v=>v>0);
-    const median=vols.length?vols.slice().sort((a,b)=>a-b)[Math.floor(vols.length/2)]:0;
-    locks.forEach(tx=>{
-      const vol=pVR(tx),from=(tx.from?.hash||'').toLowerCase();
-      if(median>0&&vol>median*3)
-        this.add('red','bridge','Mega Batch',`${fN(vol)} VR (${(vol/median).toFixed(1)}x median)${price?' $'+fN(vol*price,0):''}`,tx.transaction_hash);
-      if(vol>median*2&&!KNOWN[from]&&median>0)
-        this.add('yellow','bridge','Unknown Large Sender',`${sA(from)} sent ${fN(vol)} VR`,tx.transaction_hash);
+  analyzeBridge(locks, unlocks, price){
+    const vols = locks.map(t=>pVR(t)).filter(v=>v>0);
+    const med  = vols.length ? vols.slice().sort((a,b)=>a-b)[Math.floor(vols.length/2)] : 0;
+    locks.forEach(tx => {
+      const vol = pVR(tx), from = (tx.from?.hash||'').toLowerCase();
+      if(med>0 && vol>med*3)
+        this.add('red','bridge','Mega Batch', `${fN(vol)} VR (${(vol/med).toFixed(1)}× median)${price?' $'+fN(vol*price,0):''}`, tx.transaction_hash);
+      if(vol>med*2 && !KNOWN[from] && med>0)
+        this.add('yellow','bridge','Unknown Large Sender', `${sA(from)} sent ${fN(vol)} VR`, tx.transaction_hash);
     });
-    const now=Date.now(),hourAgo=now-3600000;
-    const recent=locks.filter(t=>new Date(t.timestamp).getTime()>hourAgo);
-    if(recent.length>5) this.add('yellow','bridge','High Frequency',`${recent.length} batches in last hour`);
-    const outVol=locks.reduce((s,t)=>s+pVR(t),0);
-    const inVol=unlocks.reduce((s,t)=>s+pVR(t),0);
-    if(outVol>0&&inVol/outVol>.20)
-      this.add('green','bridge','Return Flow',`${(inVol/outVol*100).toFixed(1)}% inflow vs outflow`);
+    const hourAgo = Date.now()-3600000;
+    const recent = locks.filter(t => new Date(t.timestamp).getTime()>hourAgo);
+    if(recent.length>5) this.add('yellow','bridge','High Frequency', `${recent.length} batches in last hour`);
+    const outVol = locks.reduce((s,t)=>s+pVR(t),0);
+    const inVol  = unlocks.reduce((s,t)=>s+pVR(t),0);
+    if(outVol>0 && inVol/outVol>.20)
+      this.add('green','bridge','Return Flow', `${(inVol/outVol*100).toFixed(1)}% inflow vs outflow`);
   }
-  analyzeWhales(holders,transfers,price){
-    const top3=holders.slice(0,3).map(h=>(h.address?.hash||'').toLowerCase());
-    transfers.forEach(tx=>{
-      const from=(tx.from?.hash||'').toLowerCase(),to=(tx.to?.hash||'').toLowerCase(),vol=pVR(tx);
-      if(top3.includes(from)&&vol/SUPPLY>.005)
-        this.add('red','whale','Top Whale Active',`${KNOWN[from]?.name||sA(from)} moved ${fN(vol)} VR`,tx.transaction_hash);
-      if(to===MEXC.toLowerCase()&&vol>1_000_000)
-        this.add('yellow','whale','MEXC Inflow',`${fN(vol)} VR → MEXC${price?' $'+fN(vol*price,0):''}`,tx.transaction_hash);
+  analyzeWhales(holders, transfers, price){
+    const top3 = holders.slice(0,3).map(h=>(h.address?.hash||'').toLowerCase());
+    transfers.forEach(tx => {
+      const from=(tx.from?.hash||'').toLowerCase(), to=(tx.to?.hash||'').toLowerCase(), vol=pVR(tx);
+      if(top3.includes(from) && vol/SUPPLY>.005)
+        this.add('red','whale','Top Whale Active', `${KNOWN[from]?.name||sA(from)} moved ${fN(vol)} VR`, tx.transaction_hash);
+      if(to===MEXC.toLowerCase() && vol>1_000_000)
+        this.add('yellow','whale','MEXC Inflow', `${fN(vol)} VR → MEXC${price?' $'+fN(vol*price,0):''}`, tx.transaction_hash);
     });
   }
   analyzeWormhole(txs){
-    const methods=['receiveMessage','sendMessage','transfer','attestToken'];
-    const unusual=txs.filter(tx=>tx.status==='error'||tx.status==='failed');
-    if(unusual.length>0)
-      this.add('red','wormhole','Wormhole Tx Failures',`${unusual.length} failed transactions on Wormhole transceiver`);
-    if(txs.length>15)
-      this.add('yellow','wormhole','High Wormhole Activity',`${txs.length} recent transactions on Wormhole transceiver`);
+    const failed = txs.filter(tx=>tx.status==='error'||tx.status==='failed');
+    if(failed.length>0) this.add('red','wormhole','Wormhole Failures', `${failed.length} failed txs`);
+    if(txs.length>15) this.add('yellow','wormhole','High Wormhole Activity', `${txs.length} recent transactions`);
   }
 }
-const engine=new AnomalyEngine();
+const engine = new AnomalyEngine();
 
 /* ─── Utilities ─────────────────────────────────────────────── */
-async function fJ(url,fb=null){
-  try{
-    const r=await fetch(url,{headers:{'Accept':'application/json'},signal:AbortSignal.timeout(12000)});
-    if(!r.ok)throw new Error('HTTP '+r.status);
+async function fJ(url) {
+  try {
+    const r = await fetch(url, {
+      headers: {'Accept':'application/json'},
+      signal: AbortSignal.timeout(14000)
+    });
+    if(!r.ok) { console.warn('[API]', url.slice(0,90), 'HTTP', r.status); return null; }
     return await r.json();
-  }catch(e){console.warn('[API]',url.slice(0,80),e.message);return fb;}
+  } catch(e) { console.warn('[API]', url.slice(0,80), e.message); return null; }
 }
 
-function pVR(tx){
-  try{return Number(BigInt(tx.total?.value||tx.value||'0'))/1e18;}
-  catch{return 0;}
+function pVR(tx) {
+  try { return Number(BigInt(tx.total?.value || tx.value || '0')) / 1e18; }
+  catch { return 0; }
 }
-function fN(n,dec=0){
-  if(n==null||isNaN(n))return'—';
-  if(Math.abs(n)>=1e9)return(n/1e9).toFixed(1)+'B';
-  if(Math.abs(n)>=1e6)return(n/1e6).toFixed(1)+'M';
-  if(Math.abs(n)>=1e3)return(n/1e3).toFixed(1)+'K';
+function fN(n, dec=0) {
+  if(n==null || isNaN(n)) return '—';
+  if(Math.abs(n)>=1e9) return (n/1e9).toFixed(1)+'B';
+  if(Math.abs(n)>=1e6) return (n/1e6).toFixed(1)+'M';
+  if(Math.abs(n)>=1e3) return (n/1e3).toFixed(1)+'K';
   return n.toFixed(dec);
 }
-function fUsd(n){return n==null?'—':'$'+fN(n,n<1?6:2);}
-function sA(a){return a?a.slice(0,6)+'…'+a.slice(-4):'—';}
+function fUsd(n){ return n==null?'—':'$'+fN(n, n<1?6:2); }
+function sA(a){ return a ? a.slice(0,6)+'…'+a.slice(-4) : '—'; }
 
-function lblFromObj(obj){
-  if(!obj)return null;
-  const h=(obj.hash||'').toLowerCase();
-  if(KNOWN[h])return KNOWN[h];
-  const tags=obj.metadata?.tags;
-  if(tags?.length){
-    const nt=tags.find(t=>t.tagType==='name');
-    if(nt){const isEx=tags.some(t=>t.name==='Exchange');return{name:nt.name,cls:isEx?'lbl-exchange':'lbl-unknown'};}
+function lblFromObj(obj) {
+  if(!obj) return null;
+  const h = (obj.hash||'').toLowerCase();
+  if(KNOWN[h]) return KNOWN[h];
+  const tags = obj.metadata?.tags;
+  if(tags?.length) {
+    const nt = tags.find(t=>t.tagType==='name');
+    if(nt) { const isEx=tags.some(t=>t.name==='Exchange'); return {name:nt.name, cls:isEx?'lbl-exchange':'lbl-unknown'}; }
   }
-  if(obj.name==='StakeVR')return{name:'StakeVR',cls:'lbl-stake'};
-  if(obj.name&&!['ERC1967Proxy','GnosisSafeProxy'].includes(obj.name))return{name:obj.name,cls:'lbl-unknown'};
+  if(obj.name==='StakeVR') return {name:'StakeVR', cls:'lbl-stake'};
+  if(obj.name && !['ERC1967Proxy','GnosisSafeProxy'].includes(obj.name)) return {name:obj.name, cls:'lbl-unknown'};
   return null;
 }
 
-function addrH(obj){
-  const hash=typeof obj==='string'?obj:obj?.hash;
-  if(!hash)return'—';
-  const l=typeof obj==='object'?lblFromObj(obj):(KNOWN[hash.toLowerCase()]||null);
-  const lb=l?`<span class="lbl ${l.cls}">${l.name}</span>`:'';
+function addrH(obj) {
+  const hash = typeof obj==='string' ? obj : obj?.hash;
+  if(!hash) return '—';
+  const l = typeof obj==='object' ? lblFromObj(obj) : (KNOWN[hash.toLowerCase()]||null);
+  const lb = l ? `<span class="lbl ${l.cls}">${l.name}</span>` : '';
   return `${lb}<a class="addr-link" href="${ES}/address/${hash}" target="_blank" title="${hash}">${sA(hash)}</a><span class="copy-btn" onclick="cpy('${hash}',event)">📋</span>`;
 }
 
-function cpy(t,e){
-  e?.preventDefault();e?.stopPropagation();
+function cpy(t,e) {
+  e?.preventDefault(); e?.stopPropagation();
   navigator.clipboard.writeText(t).then(()=>{
-    if(e?.target){e.target.textContent='✓';setTimeout(()=>e.target.textContent='📋',1000);}
+    if(e?.target){e.target.textContent='✓'; setTimeout(()=>e.target.textContent='📋',1000);}
   });
 }
 
-function tCell(ts){
-  if(!ts)return'';
-  const d=new Date(ts);
-  return `<span class="tx-time-date">${d.toISOString().slice(0,10)}</span><br>${d.toISOString().slice(11,16)} UTC`;
+function tCell(ts) {
+  if(!ts) return '';
+  const d = new Date(ts);
+  return `<span class="tx-date">${d.toISOString().slice(0,10)}</span><br>${d.toISOString().slice(11,16)} UTC`;
 }
 
-function setStatus(ok,stale=false){
-  const dot=document.getElementById('statusDot');
-  const lbl=document.getElementById('statusLabel');
-  dot.className='status-dot '+(stale?'stale':ok?'ok':'err');
-  lbl.textContent=stale?'Stale data':ok?'Live':'Error';
-  lbl.style.color=stale?'var(--yellow)':ok?'var(--muted)':'var(--red)';
+function setStatus(ok) {
+  document.getElementById('statusDot').className = 'status-dot ' + (ok?'ok':'err');
+  document.getElementById('statusLabel').textContent = ok ? 'Live' : 'Partial';
+  document.getElementById('statusLabel').style.color = ok ? 'var(--muted)' : 'var(--yellow)';
 }
 
-/* ─── Data loading: cached JSON first, live API fallback ────── */
-async function loadData(){
-  // Try loading from data/ (GitHub Actions cache — works same-origin)
-  const manifest=await fJ('./data/manifest.json');
-  if(manifest?.data?.last_fetch){
-    const age=(Date.now()-new Date(manifest.data.last_fetch).getTime())/60000;
-    D.lastFetchAt=manifest.data.last_fetch;
-    if(age<25){
-      // Fresh cache — load all from data/
-      await loadFromCache();
-      D.dataSource='cached';
-      document.getElementById('dataSrcBadge').textContent='📦 Cached ('+Math.round(age)+'m ago)';
-      document.getElementById('dataSrcBadge').className='data-src-badge cached';
-      if(age>15) document.getElementById('staleNotice').style.display='block';
-      return true;
+/* ─── Data Fetching (NO limit= params on Blockscout) ─────────── */
+async function fetchBridge() {
+  // Correct URL — NO ?limit= param
+  const d = await fJ(`${BS}/addresses/${NTT_MGR}/token-transfers?token=${VR_TOKEN}&type=ERC-20`);
+  if(!d?.items) return;
+  const nttLow = NTT_MGR.toLowerCase();
+  S.locks   = d.items.filter(tx => (tx.to?.hash||'').toLowerCase()===nttLow);
+  S.unlocks = d.items.filter(tx => (tx.from?.hash||'').toLowerCase()===nttLow);
+  S.tokenMeta = d.items[0]?.token || null;
+}
+
+async function fetchHolders() {
+  const d = await fJ(`${BS}/tokens/${VR_TOKEN}/holders`); // NO limit param
+  if(d?.items) S.holders = d.items;
+}
+
+async function fetchTransfers() {
+  const d = await fJ(`${BS}/tokens/${VR_TOKEN}/transfers`); // NO limit param
+  if(d?.items) S.transfers = d.items;
+}
+
+async function fetchPrice() {
+  const d = await fJ(`${CG}/simple/price?ids=victoria-vr&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&include_market_cap=true`);
+  if(d?.['victoria-vr']) {
+    const v = d['victoria-vr'];
+    S.price=v.usd; S.change24h=v.usd_24h_change; S.vol24h=v.usd_24h_vol; S.mcap=v.usd_market_cap;
+  }
+  // Fallback: Blockscout exchange_rate
+  if(!S.price && S.tokenMeta?.exchange_rate) S.price = parseFloat(S.tokenMeta.exchange_rate);
+  if(!S.vol24h && S.tokenMeta?.volume_24h)   S.vol24h = parseFloat(S.tokenMeta.volume_24h);
+}
+
+async function fetchChart(days) {
+  if(S.chartData[days]) return; // already cached in memory
+  const d = await fJ(`${CG}/coins/victoria-vr/market_chart?vs_currency=usd&days=${days}`);
+  if(d?.prices && d.prices.length) {
+    S.chartData[days] = {
+      labels: d.prices.map(p => new Date(p[0])),
+      prices: d.prices.map(p => p[1])
+    };
+  }
+}
+
+async function fetchWalletBalances() {
+  const list = [
+    {addr:MEXC,     name:'MEXC',        cls:'lbl-mexc'},
+    {addr:SMART_ACC,name:'EIP-7702 Acc',cls:'lbl-account'},
+    {addr:NTT_MGR,  name:'NTT Manager', cls:'lbl-ntt'},
+    {addr:DEPLOYER, name:'VR Deployer',  cls:'lbl-deployer'},
+    {addr:MEV_BOT,  name:'MEV Bot',      cls:'lbl-mev'},
+    {addr:UNI_POOL, name:'Uni V2 Pool',  cls:'lbl-pool'},
+  ];
+  S.wallets = await Promise.all(list.map(async w => {
+    const d = await fJ(`${BS}/addresses/${w.addr}/token-balances`);
+    let balance = '0';
+    if(Array.isArray(d)) {
+      const vr = d.find(t => (t.token?.address_hash||t.token?.address||'').toLowerCase()===VR_TOKEN.toLowerCase());
+      if(vr) balance = vr.value;
     }
-  }
-  // Cache stale or missing — fall back to live API
-  await loadFromLiveAPI();
-  D.dataSource='live';
-  document.getElementById('dataSrcBadge').textContent='🔴 Live API';
-  document.getElementById('dataSrcBadge').className='data-src-badge live';
-  return true;
-}
-
-async function loadFromCache(){
-  const [bridge,holders,transfers,price,wallets,deployer,wormhole]=await Promise.all([
-    fJ('./data/bridge.json'),fJ('./data/holders.json'),fJ('./data/transfers.json'),
-    fJ('./data/price.json'),fJ('./data/wallets.json'),fJ('./data/deployer.json'),
-    fJ('./data/wormhole.json'),
-  ]);
-
-  if(bridge?.data){
-    D.locks=bridge.data.locks||[];D.unlocks=bridge.data.unlocks||[];D.tokenMeta=bridge.data.tokenMeta;
-  }
-  if(holders?.data)D.holders=holders.data.holders||[];
-  if(transfers?.data)D.transfers=transfers.data.transfers||[];
-  if(price?.data){
-    const p=price.data.price;
-    if(p){D.price=p.usd;D.change24h=p.usd_24h_change;D.vol24h=p.usd_24h_vol;D.mcap=p.usd_market_cap;}
-    D.spark=price.data.sparkline||[];
-  }
-  if(wallets?.data)D.wallets=wallets.data.wallets||[];
-  if(deployer?.data)D.deployerTxs=deployer.data.transactions||[];
-  if(wormhole?.data)D.wormholeTxs=wormhole.data.transactions||[];
-}
-
-async function loadFromLiveAPI(){
-  const nttLow=NTT_MGR.toLowerCase();
-  const[bridge,holders,transfers,price,spark,deployer,wormhole]=await Promise.allSettled([
-    fJ(`${BS}/addresses/${NTT_MGR}/token-transfers?token=${VR_TOKEN}&type=ERC-20&limit=50`),
-    fJ(`${BS}/tokens/${VR_TOKEN}/holders`),
-    fJ(`${BS}/tokens/${VR_TOKEN}/transfers?limit=50`),
-    fJ(`${CG}/simple/price?ids=victoria-vr&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&include_market_cap=true`),
-    fJ(`${CG}/coins/victoria-vr/market_chart?vs_currency=usd&days=7&interval=daily`),
-    fJ(`${BS}/addresses/${DEPLOYER}/transactions?limit=10`),
-    fJ(`${BS}/addresses/${WORMHOLE}/transactions?limit=20`),
-  ]);
-
-  if(bridge.value?.items){
-    D.locks=bridge.value.items.filter(tx=>(tx.to?.hash||'').toLowerCase()===nttLow);
-    D.unlocks=bridge.value.items.filter(tx=>(tx.from?.hash||'').toLowerCase()===nttLow);
-    D.tokenMeta=bridge.value.items[0]?.token||null;
-  }
-  if(holders.value?.items)D.holders=holders.value.items;
-  if(transfers.value?.items)D.transfers=transfers.value.items;
-  const p=price.value?.['victoria-vr'];
-  if(p){D.price=p.usd;D.change24h=p.usd_24h_change;D.vol24h=p.usd_24h_vol;D.mcap=p.usd_market_cap;}
-  if(spark.value?.prices)D.spark=spark.value.prices.map(x=>x[1]);
-  if(deployer.value?.items)D.deployerTxs=deployer.value.items;
-  if(wormhole.value?.items)D.wormholeTxs=wormhole.value.items;
-
-  // Live wallet balances
-  D.wallets=await Promise.all([
-    {addr:MEXC,name:'MEXC',cls:'lbl-mexc'},{addr:SMART_ACC,name:'EIP-7702 Acc',cls:'lbl-account'},
-    {addr:NTT_MGR,name:'NTT Manager',cls:'lbl-ntt'},{addr:DEPLOYER,name:'VR Deployer',cls:'lbl-deployer'},
-    {addr:MEV_BOT,name:'MEV Bot',cls:'lbl-mev'},{addr:UNI_POOL,name:'Uni V2 Pool',cls:'lbl-pool'},
-  ].map(async w=>{
-    const d=await fJ(`${BS}/addresses/${w.addr}/token-balances`);
-    let bal='0';
-    if(Array.isArray(d)){
-      const vr=d.find(t=>(t.token?.address_hash||t.token?.address||'').toLowerCase()===VR_TOKEN.toLowerCase());
-      if(vr)bal=vr.value;
-    }
-    return{...w,balance:bal};
+    return {...w, balance};
   }));
-
-  // Fallback price from Blockscout token meta
-  if(!D.price&&D.tokenMeta?.exchange_rate)D.price=parseFloat(D.tokenMeta.exchange_rate);
-  if(!D.vol24h&&D.tokenMeta?.volume_24h)D.vol24h=parseFloat(D.tokenMeta.volume_24h);
 }
 
-/* ─── Renders ───────────────────────────────────────────────── */
-function renderOverview(){
-  const p=D.price;
-  document.getElementById('ovPrice').textContent=p?`$${p<0.01?p.toFixed(6):p.toFixed(4)}`:'—';
-  const chEl=document.getElementById('ovChange');
-  if(D.change24h!=null){const c=D.change24h;chEl.innerHTML=`<span class="change ${c>=0?'up':'down'}">${c>=0?'+':''}${c.toFixed(2)}%</span>`;}
-  document.getElementById('ovPriceSrc').textContent=D.dataSource==='cached'?'GitHub Actions cache':'CoinGecko/Blockscout live';
-  document.getElementById('ovVol').textContent=D.vol24h?fUsd(D.vol24h):'—';
-  document.getElementById('ovMcap').textContent=D.mcap?fUsd(D.mcap):(p?fUsd(p*SUPPLY):'—');
-  const nttW=D.wallets.find(w=>w.addr===NTT_MGR);
-  if(nttW)document.getElementById('ovNtt').textContent=fN(Number(BigInt(nttW.balance||'0'))/1e18)+' VR';
-  const outVol=D.locks.reduce((s,t)=>s+pVR(t),0);
-  const inVol=D.unlocks.reduce((s,t)=>s+pVR(t),0);
-  document.getElementById('ovBrOut').textContent=fN(outVol)+' VR';
-  document.getElementById('ovBrOutSub').textContent=`${D.locks.length} batches`+(p?` · $${fN(outVol*p,0)}`:'');
-  document.getElementById('ovBrIn').textContent=fN(inVol)+' VR';
-  document.getElementById('ovBrInSub').textContent=`${D.unlocks.length} unlocks`+(p?` · $${fN(inVol*p,0)}`:'');
-  const big=D.locks.reduce((m,t)=>Math.max(m,pVR(t)),0);
-  document.getElementById('ovBig').textContent=big>0?fN(big)+' VR':'—';
-  document.getElementById('ovBigSub').textContent=big>0&&p?'$'+fN(big*p,0):'';
-  drawSparkline();
+async function fetchWormhole() {
+  // NO limit param
+  const d = await fJ(`${BS}/addresses/${WORMHOLE}/transactions`);
+  if(d?.items) S.wormholeTxs = d.items;
 }
 
-function drawSparkline(){
-  const cv=document.getElementById('sparkCanvas');
-  if(!cv||!D.spark.length)return;
-  const ctx=cv.getContext('2d');const dpr=devicePixelRatio||1;
-  const rect=cv.parentElement.getBoundingClientRect();
-  cv.width=rect.width*dpr;cv.height=rect.height*dpr;
-  cv.style.width=rect.width+'px';cv.style.height=rect.height+'px';ctx.scale(dpr,dpr);
-  const data=D.spark,w=rect.width,h=rect.height;
-  const mn=Math.min(...data),mx=Math.max(...data),rng=mx-mn||1,pd=4;
-  ctx.clearRect(0,0,w,h);ctx.beginPath();
-  data.forEach((v,i)=>{const x=pd+(i/(data.length-1))*(w-2*pd);const y=h-pd-((v-mn)/rng)*(h-2*pd);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
-  const up=data[data.length-1]>=data[0];
-  ctx.strokeStyle=up?'#22c55e':'#ef4444';ctx.lineWidth=2;ctx.stroke();
-  ctx.lineTo(pd+(w-2*pd),h);ctx.lineTo(pd,h);ctx.closePath();
-  const g=ctx.createLinearGradient(0,0,0,h);const c=up?'34,197,94':'239,68,68';
-  g.addColorStop(0,`rgba(${c},0.12)`);g.addColorStop(1,`rgba(${c},0)`);ctx.fillStyle=g;ctx.fill();
-  document.getElementById('sparkInfo').textContent=`Low: $${Math.min(...data).toFixed(6)} · High: $${Math.max(...data).toFixed(6)}`;
+async function fetchDeployer() {
+  // NO limit param
+  const d = await fJ(`${BS}/addresses/${DEPLOYER}/transactions`);
+  if(d?.items) S.deployerTxs = d.items.slice(0,10);
 }
 
-function renderBridge(){
-  const p=D.price;
-  const outVol=D.locks.reduce((s,t)=>s+pVR(t),0);
-  const inVol=D.unlocks.reduce((s,t)=>s+pVR(t),0);
-  document.getElementById('brOut').textContent=fN(outVol)+' VR';
-  document.getElementById('brOutSub').textContent=p?'$'+fN(outVol*p,0):'';
-  document.getElementById('brIn').textContent=fN(inVol)+' VR';
-  document.getElementById('brInSub').textContent=p?'$'+fN(inVol*p,0):'';
-  const net=outVol-inVol;
-  document.getElementById('brNet').textContent=(net>0?'+':'')+fN(net)+' VR';
-  document.getElementById('brNet').style.color=net>0?'#f0b90b':'var(--green)';
-  document.getElementById('brCnt').textContent=D.locks.length+D.unlocks.length;
-  document.getElementById('lockCnt').textContent=D.locks.length+' txs';
-  document.getElementById('unlockCnt').textContent=D.unlocks.length+' txs';
-
-  const vols=D.locks.map(t=>pVR(t)).filter(v=>v>0).sort((a,b)=>a-b);
-  const med=vols.length?vols[Math.floor(vols.length/2)]:0;
-
-  document.getElementById('lockList').innerHTML=D.locks.length?
-    D.locks.map(tx=>brRow(tx,'out',med,p)).join(''):
-    '<div class="msg-box">No lock transactions in data</div>';
-  document.getElementById('unlockList').innerHTML=D.unlocks.length?
-    D.unlocks.map(tx=>brRow(tx,'in',med,p)).join(''):
-    '<div class="msg-box">No unlock transactions in data</div>';
+/* ─── Price Chart (Chart.js) ─────────────────────────────────── */
+function initChart() {
+  const ctx = document.getElementById('priceChart').getContext('2d');
+  priceChart = new Chart(ctx, {
+    type: 'line',
+    data: { labels:[], datasets:[{
+      label: 'VR Price (USD)',
+      data: [],
+      borderColor: '#3b82f6',
+      backgroundColor: 'rgba(59,130,246,0.06)',
+      borderWidth: 1.5,
+      pointRadius: 0,
+      pointHoverRadius: 4,
+      fill: true,
+      tension: 0.3,
+    }]},
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { intersect:false, mode:'index' },
+      plugins: {
+        legend: { display:false },
+        tooltip: {
+          backgroundColor: '#0d1320',
+          borderColor: '#1a2535',
+          borderWidth: 1,
+          titleColor: '#64748b',
+          bodyColor: '#dde6f5',
+          callbacks: {
+            title: items => {
+              const d = new Date(items[0].label);
+              return d.toLocaleDateString('cs-CZ', {day:'2-digit',month:'short',year:'numeric'});
+            },
+            label: item => `$${item.raw.toFixed(item.raw<0.01?6:4)}`
+          }
+        }
+      },
+      scales: {
+        x: {
+          type: 'time',
+          time: { tooltipFormat: 'PPP' },
+          grid: { color:'rgba(26,37,53,.5)', drawBorder:false },
+          ticks: { color:'#64748b', maxTicksLimit:8, font:{size:10} }
+        },
+        y: {
+          position: 'right',
+          grid: { color:'rgba(26,37,53,.5)', drawBorder:false },
+          ticks: { color:'#64748b', font:{size:10},
+            callback: v => v < 0.001 ? v.toExponential(2) : '$'+v.toFixed(v<0.01?6:4)
+          }
+        }
+      }
+    }
+  });
 }
 
-function brRow(tx,dir,med,p){
-  const vol=pVR(tx),usd=p?vol*p:null;
-  const peer=dir==='out'?tx.from:tx.to;
-  const hash=tx.transaction_hash||'';
-  let flag='';
-  if(med>0&&vol>med*3)flag='<div class="tx-flag"><span class="lbl" style="background:rgba(239,68,68,.12);color:var(--red)">🔴 MEGA</span></div>';
-  else if(med>0&&vol>med*2)flag='<div class="tx-flag"><span class="lbl" style="background:rgba(245,158,11,.08);color:var(--yellow)">🟡 LARGE</span></div>';
+async function loadAndRenderChart(days) {
+  currentDays = days;
+  document.getElementById('chartInfo').textContent = 'Loading…';
+
+  await fetchChart(days);
+  const cd = S.chartData[days];
+  if(!cd) { document.getElementById('chartInfo').textContent = 'Chart data unavailable'; return; }
+
+  // Color based on direction
+  const up = cd.prices[cd.prices.length-1] >= cd.prices[0];
+  const color = up ? '#22c55e' : '#ef4444';
+  priceChart.data.labels = cd.labels;
+  priceChart.data.datasets[0].data = cd.prices;
+  priceChart.data.datasets[0].borderColor = color;
+  priceChart.data.datasets[0].backgroundColor = up ? 'rgba(34,197,94,0.05)' : 'rgba(239,68,68,0.05)';
+
+  const low = Math.min(...cd.prices), high = Math.max(...cd.prices);
+  const pct = ((cd.prices[cd.prices.length-1]/cd.prices[0]-1)*100);
+  document.getElementById('chartInfo').textContent =
+    `Low: $${low.toFixed(6)} · High: $${high.toFixed(6)} · Change: ${pct>=0?'+':''}${pct.toFixed(1)}%`;
+
+  priceChart.update('none');
+}
+
+/* ─── Renders ────────────────────────────────────────────────── */
+function renderOverview() {
+  const p = S.price;
+  document.getElementById('ovPrice').textContent = p ? `$${p<0.01?p.toFixed(6):p.toFixed(4)}` : '—';
+  const chEl = document.getElementById('ovChange');
+  if(S.change24h!=null) {
+    const c = S.change24h;
+    chEl.innerHTML = `<span class="change ${c>=0?'up':'down'}">${c>=0?'+':''}${c.toFixed(2)}%</span>`;
+  }
+  document.getElementById('ovSrc').textContent = 'CoinGecko / Blockscout live';
+  document.getElementById('ovVol').textContent  = S.vol24h ? fUsd(S.vol24h) : '—';
+  document.getElementById('ovMcap').textContent = S.mcap ? fUsd(S.mcap) : (p?fUsd(p*SUPPLY):'—');
+
+  const nttW = S.wallets.find(w=>w.addr===NTT_MGR);
+  if(nttW) document.getElementById('ovNtt').textContent = fN(Number(BigInt(nttW.balance||'0'))/1e18)+' VR';
+
+  const outVol = S.locks.reduce((s,t)=>s+pVR(t),0);
+  const inVol  = S.unlocks.reduce((s,t)=>s+pVR(t),0);
+  document.getElementById('ovBrOut').textContent = fN(outVol)+' VR';
+  document.getElementById('ovBrOutSub').textContent = `${S.locks.length} batches`+(p?` · $${fN(outVol*p,0)}`:'');
+  document.getElementById('ovBrIn').textContent  = fN(inVol)+' VR';
+  document.getElementById('ovBrInSub').textContent = `${S.unlocks.length} unlocks`+(p?` · $${fN(inVol*p,0)}`:'');
+  const big = S.locks.reduce((m,t)=>Math.max(m,pVR(t)),0);
+  document.getElementById('ovBig').textContent    = big>0 ? fN(big)+' VR' : '—';
+  document.getElementById('ovBigSub').textContent = big>0&&p ? '$'+fN(big*p,0) : '';
+}
+
+function renderBridge() {
+  const p = S.price;
+  const outVol = S.locks.reduce((s,t)=>s+pVR(t),0);
+  const inVol  = S.unlocks.reduce((s,t)=>s+pVR(t),0);
+  document.getElementById('brOut').textContent = fN(outVol)+' VR';
+  document.getElementById('brOutSub').textContent = p?'$'+fN(outVol*p,0):'';
+  document.getElementById('brIn').textContent  = fN(inVol)+' VR';
+  document.getElementById('brInSub').textContent = p?'$'+fN(inVol*p,0):'';
+  const net = outVol-inVol;
+  document.getElementById('brNet').textContent = (net>0?'+':'')+fN(net)+' VR';
+  document.getElementById('brNet').style.color = net>0?'#f0b90b':'var(--green)';
+  document.getElementById('brCnt').textContent = S.locks.length+S.unlocks.length;
+  document.getElementById('lockCnt').textContent = S.locks.length+' txs';
+  document.getElementById('unlockCnt').textContent = S.unlocks.length+' txs';
+
+  const vols = S.locks.map(t=>pVR(t)).filter(v=>v>0).sort((a,b)=>a-b);
+  const med  = vols.length ? vols[Math.floor(vols.length/2)] : 0;
+
+  document.getElementById('lockList').innerHTML = S.locks.length ?
+    S.locks.map(tx => brRow(tx,'out',med,p)).join('') :
+    '<div class="msg-box">No lock transactions loaded</div>';
+  document.getElementById('unlockList').innerHTML = S.unlocks.length ?
+    S.unlocks.map(tx => brRow(tx,'in',med,p)).join('') :
+    '<div class="msg-box">No unlock transactions loaded</div>';
+}
+
+function brRow(tx, dir, med, p) {
+  const vol = pVR(tx), usd = p ? vol*p : null;
+  const peer = dir==='out' ? tx.from : tx.to;
+  const hash = tx.transaction_hash||'';
+  let flag = '';
+  if(med>0&&vol>med*3) flag='<div class="tx-flag"><span class="lbl" style="background:rgba(239,68,68,.12);color:var(--red)">🔴 MEGA</span></div>';
+  else if(med>0&&vol>med*2) flag='<div class="tx-flag"><span class="lbl" style="background:rgba(245,158,11,.08);color:var(--yellow)">🟡 LARGE</span></div>';
   return `<div class="tx-row">
     <div class="tx-time">${tCell(tx.timestamp)}</div>
     <div>
@@ -572,22 +628,24 @@ function brRow(tx,dir,med,p){
       <div class="tx-addr">${addrH(peer)}</div>
       <a class="tx-hash-link" href="${ES}/tx/${hash}" target="_blank">${sA(hash)}</a>${flag}
     </div>
-    <div class="tx-right"><div class="tx-usd">${usd!=null?'$'+fN(usd,0):''}</div></div>
+    <div style="text-align:right"><div class="tx-usd">${usd!=null?'$'+fN(usd,0):''}</div></div>
   </div>`;
 }
 
-function renderWormhole(){
-  const txs=D.wormholeTxs;
-  const p=D.price;
-  const whEl=document.getElementById('whTxList');
-  if(txs.length){
-    whEl.innerHTML=`<table><thead><tr><th>Time</th><th>Method</th><th>From</th><th>To</th><th>Status</th><th>Tx</th></tr></thead><tbody>
-    ${txs.map(tx=>{
-      const h=tx.hash||'';const ts=tx.timestamp?new Date(tx.timestamp).toISOString().slice(0,16).replace('T',' '):' —';
+function renderWormhole() {
+  const txs = S.wormholeTxs;
+  const el = document.getElementById('whTxList');
+  if(txs.length) {
+    el.innerHTML = `<table><thead><tr><th>Time</th><th>Method</th><th>From</th><th>To</th><th>Status</th><th>Tx</th></tr></thead><tbody>
+    ${txs.map(tx => {
+      const h=tx.hash||'';
+      const ts=tx.timestamp?new Date(tx.timestamp).toISOString().slice(0,16).replace('T',' '):'—';
       const method=tx.method||'—';
-      const status=tx.status==='ok'?'<span class="lbl" style="background:rgba(34,197,94,.1);color:var(--green)">✓ ok</span>':
-        tx.status?`<span class="lbl" style="background:rgba(239,68,68,.12);color:var(--red)">✗ ${tx.status}</span>`:'—';
-      return`<tr>
+      const ok=tx.status==='ok';
+      const status=ok
+        ?'<span class="lbl" style="background:rgba(34,197,94,.1);color:var(--green)">✓ ok</span>'
+        :tx.status?`<span class="lbl" style="background:rgba(239,68,68,.12);color:var(--red)">✗ ${tx.status}</span>`:'—';
+      return `<tr>
         <td style="font-size:10px;white-space:nowrap">${ts}</td>
         <td><span class="lbl lbl-wh">${method}</span></td>
         <td>${addrH(tx.from)}</td><td>${tx.to?addrH(tx.to):'—'}</td>
@@ -595,34 +653,37 @@ function renderWormhole(){
         <td><a href="${ES}/tx/${h}" target="_blank" class="addr-link">${sA(h)}</a></td>
       </tr>`;
     }).join('')}</tbody></table>`;
-  }else{whEl.innerHTML='<div class="msg-box">No Wormhole transactions in data</div>';}
+  } else {
+    el.innerHTML = '<div class="msg-box">No Wormhole transactions in data</div>';
+  }
 
-  // NTT Executor uses same locks data method
-  const nttEl=document.getElementById('nttExecList');
-  const nttTxs=D.locks.filter(tx=>(tx.from?.hash||'').toLowerCase()===NTT_EXEC.toLowerCase());
-  if(nttTxs.length){
-    nttEl.innerHTML=`<table><thead><tr><th>Time</th><th>Amount</th><th>To</th><th>Tx</th></tr></thead><tbody>
-    ${nttTxs.map(tx=>{
-      const vol=pVR(tx);const h=tx.transaction_hash||'';
+  const nttTxs = S.locks.filter(tx=>(tx.from?.hash||'').toLowerCase()===NTT_EXEC.toLowerCase());
+  const nttEl = document.getElementById('nttExecList');
+  if(nttTxs.length) {
+    nttEl.innerHTML = `<table><thead><tr><th>Time</th><th>Amount VR</th><th>USD</th><th>To</th><th>Tx</th></tr></thead><tbody>
+    ${nttTxs.map(tx => {
+      const vol=pVR(tx), h=tx.transaction_hash||'';
       const ts=tx.timestamp?new Date(tx.timestamp).toISOString().slice(0,16).replace('T',' '):'—';
-      return`<tr>
+      return `<tr>
         <td style="font-size:10px;white-space:nowrap">${ts}</td>
         <td class="mono" style="font-weight:700;color:#f0b90b">${fN(vol)} VR</td>
+        <td>${S.price?'$'+fN(vol*S.price,0):'—'}</td>
         <td>${addrH(tx.to)}</td>
         <td><a href="${ES}/tx/${h}" target="_blank" class="addr-link">${sA(h)}</a></td>
       </tr>`;
     }).join('')}</tbody></table>`;
-  }else{nttEl.innerHTML='<div class="msg-box">No NTT Executor transactions in loaded bridge data</div>';}
+  } else {
+    nttEl.innerHTML = '<div class="msg-box">No NTT Executor batches in loaded bridge data</div>';
+  }
 }
 
-function renderWhales(){
-  const p=D.price;
-  // Wallet watch
-  const wEl=document.getElementById('walletWatch');
-  if(D.wallets.length){
-    wEl.innerHTML=D.wallets.map(w=>{
-      const bal=Number(BigInt(w.balance||'0'))/1e18;
-      return`<div class="wallet-row">
+function renderWhales() {
+  const p = S.price;
+  const wEl = document.getElementById('walletWatch');
+  if(S.wallets.length) {
+    wEl.innerHTML = S.wallets.map(w => {
+      const bal = Number(BigInt(w.balance||'0'))/1e18;
+      return `<div class="wallet-row">
         <span class="wallet-name"><span class="lbl ${w.cls}">${w.name}</span></span>
         <a class="addr-link" href="${ES}/address/${w.addr}" target="_blank">${sA(w.addr)}</a>
         <span class="copy-btn" onclick="cpy('${w.addr}',event)">📋</span>
@@ -632,81 +693,94 @@ function renderWhales(){
       </div>`;
     }).join('');
   }
-  // Holders
-  const hEl=document.getElementById('holdersTable');
-  if(D.holders.length){
-    hEl.innerHTML=`<table><thead><tr><th>#</th><th>Address</th><th>Balance</th><th>% Supply</th><th>USD</th></tr></thead><tbody>
-    ${D.holders.map((h,i)=>{
-      const bal=Number(BigInt(h.value||'0'))/1e18,pct=bal/SUPPLY*100;
-      return`<tr><td>${i+1}</td><td>${addrH(h.address)}</td>
+
+  const hEl = document.getElementById('holdersTable');
+  if(S.holders.length) {
+    hEl.innerHTML = `<table><thead><tr><th>#</th><th>Address</th><th>Balance</th><th>% Supply</th><th>USD</th></tr></thead><tbody>
+    ${S.holders.map((h,i) => {
+      const bal = Number(BigInt(h.value||'0'))/1e18, pct = bal/SUPPLY*100;
+      return `<tr>
+        <td>${i+1}</td><td>${addrH(h.address)}</td>
         <td class="mono" style="font-weight:700">${fN(bal)}</td>
         <td>${pct.toFixed(2)}%</td>
-        <td>${p?'$'+fN(bal*p,0):'—'}</td></tr>`;
+        <td>${p?'$'+fN(bal*p,0):'—'}</td>
+      </tr>`;
     }).join('')}</tbody></table>`;
-  }else{hEl.innerHTML='<div class="msg-box">Holder data unavailable</div>';}
-  // Large transfers
-  const lt=D.transfers.slice().sort((a,b)=>pVR(b)-pVR(a)).slice(0,20);
-  const ltEl=document.getElementById('lgTransfers');
-  if(lt.length){
-    ltEl.innerHTML=`<table><thead><tr><th>Time</th><th>From</th><th>To</th><th>Amount</th><th>USD</th><th>Tx</th></tr></thead><tbody>
-    ${lt.map(tx=>{
-      const vol=pVR(tx),hash=tx.transaction_hash||'';
-      const ts=tx.timestamp?new Date(tx.timestamp).toISOString().slice(0,16).replace('T',' ')+'Z':'—';
+  } else {
+    hEl.innerHTML = '<div class="msg-box">Holder data unavailable</div>';
+  }
+
+  const lt = S.transfers.slice().sort((a,b)=>pVR(b)-pVR(a)).slice(0,20);
+  const ltEl = document.getElementById('lgTransfers');
+  if(lt.length) {
+    ltEl.innerHTML = `<table><thead><tr><th>Time</th><th>From</th><th>To</th><th>Amount</th><th>USD</th><th>Tx</th></tr></thead><tbody>
+    ${lt.map(tx => {
+      const vol=pVR(tx), hash=tx.transaction_hash||'';
+      const ts=tx.timestamp?new Date(tx.timestamp).toISOString().slice(0,16).replace('T',' '):'—';
       const toLow=(tx.to?.hash||'').toLowerCase();
-      const dir=toLow===MEXC.toLowerCase()?'<span class="lbl" style="background:rgba(239,68,68,.08);color:var(--red)">→ MEXC</span>':
-        toLow===NTT_MGR.toLowerCase()?'<span class="lbl" style="background:rgba(245,158,11,.08);color:#f0b90b">→ BRIDGE</span>':
-        toLow===UNI_POOL.toLowerCase()?'<span class="lbl" style="background:rgba(59,130,246,.08);color:var(--accent)">→ DEX</span>':'';
-      return`<tr>
+      const dir = toLow===MEXC.toLowerCase()
+        ?'<span class="lbl" style="background:rgba(239,68,68,.08);color:var(--red)">→ MEXC</span>'
+        :toLow===NTT_MGR.toLowerCase()
+        ?'<span class="lbl" style="background:rgba(245,158,11,.08);color:#f0b90b">→ BRIDGE</span>'
+        :toLow===UNI_POOL.toLowerCase()
+        ?'<span class="lbl" style="background:rgba(59,130,246,.08);color:var(--accent)">→ DEX</span>':'';
+      return `<tr>
         <td style="font-size:10px;white-space:nowrap">${ts}</td>
-        <td>${addrH(tx.from)}</td>
-        <td>${addrH(tx.to)} ${dir}</td>
+        <td>${addrH(tx.from)}</td><td>${addrH(tx.to)} ${dir}</td>
         <td class="mono" style="font-weight:700">${fN(vol)} VR</td>
         <td>${p?'$'+fN(vol*p,0):'—'}</td>
         <td><a href="${ES}/tx/${hash}" target="_blank" class="addr-link">${sA(hash)}</a></td>
       </tr>`;
     }).join('')}</tbody></table>`;
-  }else{ltEl.innerHTML='<div class="msg-box">No transfer data available</div>';}
+  } else {
+    ltEl.innerHTML = '<div class="msg-box">No transfer data</div>';
+  }
 }
 
-function renderNFT(){
-  const dEl=document.getElementById('deployerTxs');
-  if(D.deployerTxs.length){
-    dEl.innerHTML=`<table><thead><tr><th>Time</th><th>Type</th><th>To</th><th>Method</th><th>Tx</th></tr></thead><tbody>
-    ${D.deployerTxs.map(tx=>{
-      const h=tx.hash||'',ts=tx.timestamp?new Date(tx.timestamp).toISOString().slice(0,16).replace('T',' '):'—';
+function renderNFT() {
+  const dEl = document.getElementById('deployerTxs');
+  if(S.deployerTxs.length) {
+    dEl.innerHTML = `<table><thead><tr><th>Time</th><th>Type</th><th>To</th><th>Method</th><th>Tx</th></tr></thead><tbody>
+    ${S.deployerTxs.map(tx => {
+      const h=tx.hash||'';
+      const ts=tx.timestamp?new Date(tx.timestamp).toISOString().slice(0,16).replace('T',' '):'—';
       const isCreate=!tx.to||tx.tx_types?.includes('contract_creation');
       const method=tx.method||'—';
-      return`<tr${isCreate?' style="background:rgba(239,68,68,.04)"':''}>
+      return `<tr${isCreate?' style="background:rgba(239,68,68,.04)"':''}>
         <td style="font-size:10px;white-space:nowrap">${ts}</td>
         <td>${isCreate?'<span class="lbl" style="background:rgba(239,68,68,.12);color:var(--red)">CREATE</span>':'<span class="lbl lbl-unknown">TX</span>'}</td>
         <td>${tx.to?addrH(tx.to):'—'}</td>
-        <td class="mono">${typeof method==='string'?method.slice(0,20):'—'}</td>
+        <td class="mono">${method.toString().slice(0,20)}</td>
         <td><a href="${ES}/tx/${h}" target="_blank" class="addr-link">${sA(h)}</a></td>
       </tr>`;
     }).join('')}</tbody></table>`;
-  }else{dEl.innerHTML='<div class="msg-box">No deployer transactions found</div>';}
+  } else {
+    dEl.innerHTML = '<div class="msg-box">No deployer transactions found</div>';
+  }
 }
 
-function renderAnomalies(){
-  const log=engine.alerts;
-  const cEl=document.getElementById('alertCount');
-  const reds=log.filter(a=>a.severity==='red').length;
-  if(log.length){
-    cEl.textContent=reds||log.length;cEl.style.display='inline-block';
-    cEl.style.background=reds?'rgba(239,68,68,.2)':'rgba(245,158,11,.15)';
-    cEl.style.color=reds?'var(--red)':'var(--yellow)';
-  }else{cEl.style.display='none';}
-  const banner=document.getElementById('alertBanner');
-  const top=log.find(a=>a.severity==='red')||log.find(a=>a.severity==='yellow');
-  if(top){
-    banner.className=`alert-banner sev-${top.severity}`;
-    banner.innerHTML=`${top.severity==='red'?'🔴':'🟡'} <strong>${top.title}:</strong> ${top.description}`;
-  }else{banner.className='alert-banner';}
-  const el=document.getElementById('anomalyLog');
-  if(!log.length){el.innerHTML='<div class="msg-box">No anomalies detected. ✓</div>';return;}
-  el.innerHTML=log.slice().reverse().map(a=>`<div class="anomaly-item" data-severity="${a.severity}" data-module="${a.module}">
+function renderAnomalies() {
+  const log = engine.alerts;
+  const cEl = document.getElementById('alertCount');
+  const reds = log.filter(a=>a.severity==='red').length;
+  if(log.length) {
+    cEl.textContent = reds||log.length; cEl.style.display='inline-block';
+    cEl.style.background = reds?'rgba(239,68,68,.2)':'rgba(245,158,11,.15)';
+    cEl.style.color = reds?'var(--red)':'var(--yellow)';
+  } else { cEl.style.display='none'; }
+
+  const banner = document.getElementById('alertBanner');
+  const top = log.find(a=>a.severity==='red')||log.find(a=>a.severity==='yellow');
+  if(top) {
+    banner.className = `alert-banner ${top.severity}`;
+    banner.innerHTML = `${top.severity==='red'?'🔴':'🟡'} <strong>${top.title}:</strong> ${top.description}`;
+  } else { banner.className='alert-banner'; }
+
+  const el = document.getElementById('anomalyLog');
+  if(!log.length){ el.innerHTML='<div class="msg-box">No anomalies detected ✓</div>'; return; }
+  el.innerHTML = log.slice().reverse().map(a => `<div class="anomaly-item" data-severity="${a.severity}" data-module="${a.module}">
     <div class="anomaly-icon">${a.severity==='red'?'🔴':a.severity==='yellow'?'🟡':'🟢'}</div>
-    <div class="anomaly-body">
+    <div>
       <div class="anomaly-title">${a.title} <span class="lbl lbl-unknown">${a.module.toUpperCase()}</span></div>
       <div class="anomaly-desc">${a.description}</div>
       <div class="anomaly-meta">${new Date(a.timestamp).toLocaleString('cs-CZ')}${a.url?` · <a href="${a.url}" target="_blank" style="font-size:9px">↗ tx</a>`:''}</div>
@@ -714,59 +788,106 @@ function renderAnomalies(){
   </div>`).join('');
 }
 
-/* ─── Main refresh ──────────────────────────────────────────── */
-async function refreshAll(){
-  const btn=document.getElementById('btnRefresh');
-  btn.disabled=true;btn.textContent='⟳ Loading…';
+/* ─── Main Refresh ───────────────────────────────────────────── */
+async function refreshAll() {
+  const btn = document.getElementById('btnRefresh');
+  btn.disabled=true; btn.textContent='⟳ Loading…';
+  document.getElementById('statusDot').className='status-dot loading';
   document.getElementById('statusLabel').textContent='Fetching…';
-  document.getElementById('staleNotice').style.display='none';
-  try{
-    await loadData();
+
+  try {
+    // Phase 1: bridge + price in parallel
+    await Promise.allSettled([
+      fetchBridge(),
+      fetchPrice(),
+    ]);
+
+    // Phase 2: everything else
+    await Promise.allSettled([
+      fetchHolders(),
+      fetchTransfers(),
+      fetchWalletBalances(),
+      fetchWormhole(),
+      fetchDeployer(),
+    ]);
+
+    // Load chart for current period
+    await loadAndRenderChart(currentDays);
+
     engine.reset();
-    engine.analyzeBridge(D.locks,D.unlocks,D.price);
-    engine.analyzeWhales(D.holders,D.transfers,D.price);
-    engine.analyzeWormhole(D.wormholeTxs);
-    renderOverview();renderBridge();renderWormhole();renderWhales();renderNFT();renderAnomalies();
-    const stale=D.lastFetchAt&&(Date.now()-new Date(D.lastFetchAt).getTime())>20*60000;
-    setStatus(true,stale);
-  }catch(e){console.error(e);setStatus(false);}
-  btn.disabled=false;btn.textContent='⟳ Refresh';
-  document.getElementById('lastUpdated').textContent=new Date().toLocaleTimeString('cs-CZ');
+    engine.analyzeBridge(S.locks, S.unlocks, S.price);
+    engine.analyzeWhales(S.holders, S.transfers, S.price);
+    engine.analyzeWormhole(S.wormholeTxs);
+
+    renderOverview();
+    renderBridge();
+    renderWormhole();
+    renderWhales();
+    renderNFT();
+    renderAnomalies();
+
+    const hasData = S.locks.length>0 || S.holders.length>0;
+    setStatus(hasData);
+  } catch(e) {
+    console.error('[Refresh]', e);
+    setStatus(false);
+  }
+
+  btn.disabled=false; btn.textContent='⟳ Refresh';
+  document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString('cs-CZ');
 }
 
-/* ─── Tabs + Filters + Export ───────────────────────────────── */
-function initTabs(){
-  const tabs=document.querySelectorAll('.tab[data-tab]');
-  const panes=document.querySelectorAll('.tab-content');
-  function act(id){
+/* ─── Tabs + Period Switcher + Filters + Export ─────────────── */
+function initTabs() {
+  const tabs = document.querySelectorAll('.tab[data-tab]');
+  const panes = document.querySelectorAll('.tab-content');
+  function act(id) {
     tabs.forEach(t=>t.classList.toggle('active',t.dataset.tab===id));
     panes.forEach(p=>p.classList.toggle('active',p.id==='tab-'+id));
     history.replaceState(null,'','#'+id);
   }
   tabs.forEach(t=>t.addEventListener('click',()=>act(t.dataset.tab)));
-  const h=location.hash.slice(1);if(h&&document.getElementById('tab-'+h))act(h);
+  const h=location.hash.slice(1);
+  if(h&&document.getElementById('tab-'+h)) act(h);
 }
+
+document.querySelectorAll('.period-btn').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    document.querySelectorAll('.period-btn').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    loadAndRenderChart(b.dataset.days);
+  });
+});
+
 document.querySelectorAll('.filter-btn').forEach(b=>{
   b.addEventListener('click',()=>{
-    document.querySelectorAll('.filter-btn').forEach(x=>x.classList.remove('active'));b.classList.add('active');
+    document.querySelectorAll('.filter-btn').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
     const f=b.dataset.filter;
     document.querySelectorAll('.anomaly-item').forEach(i=>{
       i.style.display=(f==='all'||i.dataset.severity===f||i.dataset.module===f)?'':'none';
     });
   });
 });
+
 function exportAlerts(){
   const blob=new Blob([JSON.stringify(engine.alerts,null,2)],{type:'application/json'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');a.href=url;a.download=`vr-anomaly-${new Date().toISOString().slice(0,10)}.json`;
-  a.click();URL.revokeObjectURL(url);
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=`vr-anomaly-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
 }
-document.getElementById('autoRefresh').addEventListener('change',function(){
-  if(this.checked)autoTmr=setInterval(refreshAll,300000);
-  else{clearInterval(autoTmr);autoTmr=null;}
+
+document.getElementById('autoRefresh').addEventListener('change', function(){
+  if(this.checked) autoTmr=setInterval(refreshAll,300000);
+  else { clearInterval(autoTmr); autoTmr=null; }
 });
-window.addEventListener('resize',()=>{if(D.spark.length)drawSparkline();});
+
+/* ─── Chart.js needs date adapter — use built-in ─────────────── */
+// Register a minimal time scale adapter
+Chart.defaults.plugins.legend.display = false;
+
 initTabs();
+initChart();
 refreshAll();
 </script>
 </body>
