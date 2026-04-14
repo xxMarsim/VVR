@@ -3,1207 +3,770 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Victoria VR — On-Chain Intelligence v2</title>
+<title>Victoria VR — On-Chain Intelligence</title>
 <style>
-/* ═══════════════════════════════════════════════════════════════
-   DESIGN SYSTEM
-   ═══════════════════════════════════════════════════════════════ */
-:root {
-  --bg: #07090f;
-  --panel: #0b1018;
-  --border: #1a2535;
-  --accent: #3b82f6;
-  --accent2: #8b5cf6;
-  --green: #22c55e;
-  --red: #ef4444;
-  --yellow: #f59e0b;
-  --text: #dde6f5;
-  --muted: #64748b;
-  --card: #0d1320;
-}
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; min-height: 100vh; }
-a { color: var(--accent); text-decoration: none; }
-a:hover { text-decoration: underline; }
+:root{--bg:#07090f;--panel:#0b1018;--border:#1a2535;--accent:#3b82f6;--accent2:#8b5cf6;--green:#22c55e;--red:#ef4444;--yellow:#f59e0b;--text:#dde6f5;--muted:#64748b;--card:#0d1320}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:14px;min-height:100vh}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 
-/* ── Header ── */
-.header {
-  position: sticky; top: 0; z-index: 100;
-  background: linear-gradient(135deg, #0a0e18 0%, #12101f 100%);
-  border-bottom: 1px solid var(--border);
-  padding: 12px 20px;
-  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
-}
-.logo {
-  width: 34px; height: 34px;
-  background: linear-gradient(135deg, var(--accent), var(--accent2));
-  border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  font-weight: 900; font-size: 15px; color: white; flex-shrink: 0;
-}
-.header-title { font-size: 16px; font-weight: 700; }
-.header-sub { font-size: 10px; color: var(--muted); margin-top: 1px; }
-.header-right { margin-left: auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.status-dot.ok { background: var(--green); box-shadow: 0 0 8px var(--green); }
-.status-dot.err { background: var(--red); box-shadow: 0 0 8px var(--red); }
-.status-label { font-size: 10px; color: var(--muted); }
-.btn {
-  background: #132238; color: #7eb8f7; border: 1px solid #2a4a6a;
-  border-radius: 6px; padding: 6px 14px; font-size: 12px; font-weight: 600;
-  cursor: pointer; transition: all .15s;
-}
-.btn:hover { background: #1a3a5a; border-color: #4a7aaa; }
-.btn:disabled { opacity: .4; cursor: not-allowed; }
-.toggle-label { font-size: 10px; color: var(--muted); display: flex; align-items: center; gap: 4px; cursor: pointer; user-select: none; }
-.toggle-label input { accent-color: var(--accent); }
-#lastUpdated { font-size: 10px; color: var(--muted); min-width: 130px; text-align: right; }
+.header{position:sticky;top:0;z-index:100;background:linear-gradient(135deg,#0a0e18,#12101f);border-bottom:1px solid var(--border);padding:10px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.logo{width:32px;height:32px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;color:#fff;flex-shrink:0}
+.header-title{font-size:15px;font-weight:700}.header-sub{font-size:10px;color:var(--muted);margin-top:1px}
+.header-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.status-dot.ok{background:var(--green);box-shadow:0 0 8px var(--green)}.status-dot.err{background:var(--red);box-shadow:0 0 8px var(--red)}.status-dot.stale{background:var(--yellow);box-shadow:0 0 8px var(--yellow)}
+.btn{background:#132238;color:#7eb8f7;border:1px solid #2a4a6a;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s}
+.btn:hover{background:#1a3a5a;border-color:#4a7aaa}.btn:disabled{opacity:.4;cursor:not-allowed}
+.toggle-label{font-size:10px;color:var(--muted);display:flex;align-items:center;gap:3px;cursor:pointer;user-select:none}
+.toggle-label input{accent-color:var(--accent)}
+#lastUpdated{font-size:10px;color:var(--muted);min-width:110px;text-align:right}
+#statusLabel{font-size:10px;color:var(--muted)}
+.data-src-badge{font-size:9px;padding:2px 6px;border-radius:3px;font-weight:700;background:rgba(59,130,246,.12);color:var(--accent)}
+.data-src-badge.live{background:rgba(34,197,94,.1);color:var(--green)}
+.data-src-badge.cached{background:rgba(245,158,11,.1);color:var(--yellow)}
 
-/* ── Alert Banner ── */
-.alert-banner {
-  max-width: 1280px; margin: 12px auto 0; padding: 10px 16px;
-  border-radius: 8px; font-size: 12px; font-weight: 600; display: none;
-  align-items: center; gap: 8px;
-}
-.alert-banner.red { display: flex; background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.3); color: var(--red); }
-.alert-banner.yellow { display: flex; background: rgba(245,158,11,.1); border: 1px solid rgba(245,158,11,.25); color: var(--yellow); }
-.alert-banner.green { display: flex; background: rgba(34,197,94,.1); border: 1px solid rgba(34,197,94,.25); color: var(--green); }
+.alert-banner{max-width:1280px;margin:10px auto 0;padding:8px 14px;border-radius:8px;font-size:11px;font-weight:600;display:none;align-items:center;gap:6px}
+.alert-banner.sev-red{display:flex;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:var(--red)}
+.alert-banner.sev-yellow{display:flex;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);color:var(--yellow)}
+.alert-banner.sev-green{display:flex;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);color:var(--green)}
 
-/* ── Tabs ── */
-.container { max-width: 1280px; margin: 0 auto; padding: 16px 20px 40px; }
-.tabs {
-  display: flex; gap: 4px; margin-bottom: 18px;
-  overflow-x: auto; -webkit-overflow-scrolling: touch;
-  position: sticky; top: 58px; z-index: 90;
-  background: var(--bg); padding: 8px 0;
-}
-.tab {
-  padding: 7px 16px; border-radius: 6px; cursor: pointer;
-  background: var(--panel); border: 1px solid var(--border);
-  color: var(--muted); font-size: 12px; font-weight: 600;
-  transition: all .2s; white-space: nowrap; flex-shrink: 0;
-}
-.tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
-.tab:hover:not(.active) { border-color: var(--accent); color: var(--text); }
-.tab .badge-count {
-  display: inline-block; min-width: 16px; text-align: center;
-  padding: 0 5px; border-radius: 8px; font-size: 10px; margin-left: 4px;
-  background: rgba(239,68,68,.25); color: var(--red);
-}
-.tab-content { display: none; }
-.tab-content.active { display: block; }
+.container{max-width:1280px;margin:0 auto;padding:14px 18px 40px}
+.tabs{display:flex;gap:3px;margin-bottom:14px;overflow-x:auto;position:sticky;top:52px;z-index:90;background:var(--bg);padding:6px 0}
+.tab{padding:6px 14px;border-radius:6px;cursor:pointer;background:var(--panel);border:1px solid var(--border);color:var(--muted);font-size:11px;font-weight:600;transition:all .2s;white-space:nowrap;flex-shrink:0}
+.tab.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.tab:hover:not(.active){border-color:var(--accent);color:var(--text)}
+.tab .bcnt{display:inline-block;min-width:14px;text-align:center;padding:0 4px;border-radius:7px;font-size:9px;margin-left:3px;background:rgba(239,68,68,.2);color:var(--red)}
+.tab-content{display:none}.tab-content.active{display:block}
 
-/* ── Cards & Grid ── */
-.grid { display: grid; gap: 12px; margin-bottom: 18px; }
-.g4 { grid-template-columns: repeat(4, 1fr); }
-.g3 { grid-template-columns: repeat(3, 1fr); }
-.g2 { grid-template-columns: repeat(2, 1fr); }
-@media (max-width: 900px) { .g4 { grid-template-columns: repeat(2,1fr); } }
-@media (max-width: 600px) { .g4,.g3,.g2 { grid-template-columns: 1fr; } }
+.grid{display:grid;gap:10px;margin-bottom:14px}
+.g4{grid-template-columns:repeat(4,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g2{grid-template-columns:repeat(2,1fr)}
+@media(max-width:900px){.g4{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){.g4,.g3,.g2{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+.card-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.card-value{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+.card-sub{font-size:10px;color:var(--muted);margin-top:3px}
+.change{display:inline-block;padding:1px 5px;border-radius:4px;font-size:10px;font-weight:700;margin-top:4px}
+.up{background:rgba(34,197,94,.12);color:var(--green)}.down{background:rgba(239,68,68,.12);color:var(--red)}
 
-.card {
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: 10px; padding: 14px 16px;
-}
-.card-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
-.card-value { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.card-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
-.change { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; margin-top: 6px; }
-.up { background: rgba(34,197,94,.15); color: var(--green); }
-.down { background: rgba(239,68,68,.15); color: var(--red); }
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:12px}
+.panel-head{display:flex;align-items:center;gap:7px;padding:9px 12px;border-bottom:1px solid var(--border)}
+.panel-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.dot-out{background:#f0b90b;box-shadow:0 0 5px #f0b90b88}.dot-in{background:var(--green);box-shadow:0 0 5px rgba(34,197,94,.5)}
+.dot-purple{background:var(--accent2);box-shadow:0 0 5px rgba(139,92,246,.4)}.dot-blue{background:var(--accent);box-shadow:0 0 5px rgba(59,130,246,.4)}
+.panel-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;flex:1}
+.panel-badge{font-size:10px;color:var(--muted);font-weight:600}
 
-/* ── Panels ── */
-.panel {
-  background: var(--panel); border: 1px solid var(--border);
-  border-radius: 10px; overflow: hidden; margin-bottom: 14px;
-}
-.panel-head {
-  display: flex; align-items: center; gap: 8px;
-  padding: 10px 14px; border-bottom: 1px solid var(--border);
-}
-.panel-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.dot-out { background: #f0b90b; box-shadow: 0 0 6px #f0b90b88; }
-.dot-in { background: var(--green); box-shadow: 0 0 6px rgba(34,197,94,.5); }
-.dot-purple { background: var(--accent2); box-shadow: 0 0 6px rgba(139,92,246,.5); }
-.dot-blue { background: var(--accent); box-shadow: 0 0 6px rgba(59,130,246,.5); }
-.panel-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; flex: 1; }
-.panel-badge { font-size: 10px; color: var(--muted); font-weight: 600; }
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;padding:7px 10px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-bottom:1px solid var(--border)}
+td{padding:7px 10px;border-bottom:1px solid rgba(26,37,53,.35);font-size:11px;vertical-align:middle}
+tr:hover td{background:rgba(59,130,246,.025)}
+.mono{font-family:'SF Mono','Cascadia Code',monospace;font-size:10px}
+.addr-link{color:var(--accent);font-family:monospace;font-size:10px}
+.copy-btn{display:inline-block;cursor:pointer;font-size:10px;color:var(--muted);margin-left:2px;opacity:0;transition:opacity .15s}
+tr:hover .copy-btn,.wallet-row:hover .copy-btn{opacity:1}
 
-/* ── Table ── */
-.tbl-wrap { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; }
-th { text-align: left; padding: 8px 12px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); border-bottom: 1px solid var(--border); }
-td { padding: 9px 12px; border-bottom: 1px solid rgba(26,37,53,.4); font-size: 12px; vertical-align: middle; }
-tr:hover td { background: rgba(59,130,246,.03); }
-.mono { font-family: 'SF Mono', 'Cascadia Code', monospace; font-size: 11px; }
-.addr-link { color: var(--accent); font-family: monospace; font-size: 11px; }
-.addr-link:hover { color: #93c5fd; }
-.copy-btn {
-  display: inline-block; cursor: pointer; font-size: 11px; color: var(--muted);
-  margin-left: 3px; opacity: 0; transition: opacity .15s;
-}
-tr:hover .copy-btn, .wallet-row:hover .copy-btn { opacity: 1; }
+.lbl{display:inline-block;padding:1px 5px;border-radius:3px;font-size:8px;font-weight:700;letter-spacing:.03em;white-space:nowrap;margin-right:2px}
+.lbl-ntt{background:#1a0f2a;color:#9977cc}.lbl-mexc{background:#1a2a1a;color:#4dbb77}
+.lbl-account{background:#1a2210;color:#88cc66}.lbl-deployer{background:#2a1a0a;color:#cc8844}
+.lbl-mev{background:#2a0a1a;color:#cc4488}.lbl-pool{background:#0a1a2a;color:#4488cc}
+.lbl-exchange{background:#1a1a2a;color:#8888cc}.lbl-stake{background:#1a2a2a;color:#44bbbb}
+.lbl-vault{background:#1a1a0a;color:#aaaa44}.lbl-unknown{background:#1a1a1a;color:#556}
+.lbl-wh{background:#1f0a2a;color:#cc77ff}
 
-/* ── Labels ── */
-.lbl {
-  display: inline-block; padding: 1px 6px; border-radius: 3px;
-  font-size: 9px; font-weight: 700; letter-spacing: .03em; white-space: nowrap;
-}
-.lbl-ntt { background: #1a0f2a; color: #9977cc; }
-.lbl-mexc { background: #1a2a1a; color: #4dbb77; }
-.lbl-account { background: #1a2210; color: #88cc66; }
-.lbl-deployer { background: #2a1a0a; color: #cc8844; }
-.lbl-mev { background: #2a0a1a; color: #cc4488; }
-.lbl-pool { background: #0a1a2a; color: #4488cc; }
-.lbl-unknown { background: #1a1a1a; color: #556; }
+.tx-scroll{max-height:500px;overflow-y:auto}
+.tx-scroll::-webkit-scrollbar{width:4px}
+.tx-scroll::-webkit-scrollbar-track{background:var(--bg)}
+.tx-scroll::-webkit-scrollbar-thumb{background:#2a3a50;border-radius:2px}
+.tx-row{padding:7px 12px;border-bottom:1px solid #0f1620;display:grid;grid-template-columns:75px 1fr auto;gap:5px;align-items:start;transition:background .1s}
+.tx-row:hover{background:#0e1825}
+.tx-time{font-size:9px;color:#4a6080;font-family:monospace}.tx-time-date{color:#334;font-size:8px}
+.tx-amount{font-size:12px;font-weight:700;margin-bottom:2px}.tx-amount.out{color:#f0b90b}.tx-amount.in{color:var(--green)}
+.tx-addr{font-size:9px;color:#445;display:flex;align-items:center;gap:3px;flex-wrap:wrap;margin-bottom:1px}
+.tx-hash-link{font-size:8px;color:#334;font-family:monospace}.tx-hash-link:hover{color:#5588bb}
+.tx-right{text-align:right;font-size:10px}.tx-usd{color:var(--muted);font-weight:600}
+.tx-flag{margin-top:1px}
 
-/* ── Tx List (Bridge) ── */
-.tx-scroll { max-height: 520px; overflow-y: auto; }
-.tx-scroll::-webkit-scrollbar { width: 4px; }
-.tx-scroll::-webkit-scrollbar-track { background: var(--bg); }
-.tx-scroll::-webkit-scrollbar-thumb { background: #2a3a50; border-radius: 2px; }
-.tx-row {
-  padding: 8px 14px; border-bottom: 1px solid #0f1620;
-  display: grid; grid-template-columns: 80px 1fr auto; gap: 6px;
-  align-items: start; transition: background .1s;
-}
-.tx-row:hover { background: #0e1825; }
-.tx-time { font-size: 10px; color: #4a6080; font-family: monospace; }
-.tx-time .tx-date { color: #334; font-size: 9px; }
-.tx-amount { font-size: 13px; font-weight: 700; margin-bottom: 2px; }
-.tx-amount.out { color: #f0b90b; }
-.tx-amount.in { color: var(--green); }
-.tx-addr { font-size: 10px; color: #445; display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin-bottom: 1px; }
-.tx-hash-link { font-size: 9px; color: #334; font-family: monospace; }
-.tx-hash-link:hover { color: #5588bb; }
-.tx-right { text-align: right; font-size: 10px; }
-.tx-usd { color: var(--muted); font-weight: 600; }
-.tx-flag { margin-top: 2px; }
+/* Wormhole / cross-chain section */
+.wh-row{padding:7px 12px;border-bottom:1px solid rgba(26,37,53,.35);display:grid;grid-template-columns:75px 1fr auto;gap:5px;align-items:start}
+.wh-row:hover{background:#0c1420}
+.wh-method{font-size:10px;font-weight:700;color:var(--accent2);margin-bottom:2px}
+.wh-hash{font-size:8px;color:#334;font-family:monospace}
 
-/* ── Anomaly ── */
-.anomaly-item {
-  display: flex; gap: 10px; padding: 10px 14px;
-  border-bottom: 1px solid rgba(26,37,53,.4); align-items: flex-start;
-}
-.anomaly-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
-.anomaly-body { flex: 1; min-width: 0; }
-.anomaly-title { font-size: 12px; font-weight: 700; margin-bottom: 2px; }
-.anomaly-desc { font-size: 11px; color: var(--muted); }
-.anomaly-meta { font-size: 10px; color: var(--muted); margin-top: 3px; }
-.anomaly-link { font-size: 10px; }
+.anomaly-item{display:flex;gap:8px;padding:8px 12px;border-bottom:1px solid rgba(26,37,53,.35);align-items:flex-start}
+.anomaly-icon{font-size:14px;flex-shrink:0;margin-top:1px}
+.anomaly-body{flex:1;min-width:0}
+.anomaly-title{font-size:11px;font-weight:700;margin-bottom:1px}
+.anomaly-desc{font-size:10px;color:var(--muted)}
+.anomaly-meta{font-size:9px;color:var(--muted);margin-top:2px}
 
-/* ── Wallet Watch ── */
-.wallet-row {
-  display: flex; align-items: center; gap: 10px; padding: 8px 14px;
-  border-bottom: 1px solid rgba(26,37,53,.4); font-size: 12px;
-}
-.wallet-row:hover { background: rgba(59,130,246,.03); }
-.wallet-name { font-weight: 700; min-width: 140px; }
-.wallet-bal { font-weight: 700; font-variant-numeric: tabular-nums; margin-left: auto; }
+.wallet-row{display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid rgba(26,37,53,.35);font-size:11px}
+.wallet-row:hover{background:rgba(59,130,246,.025)}
+.wallet-name{font-weight:700;min-width:130px}.wallet-bal{font-weight:700;font-variant-numeric:tabular-nums;margin-left:auto}
 
-/* ── Skeleton Loading ── */
-.skel { background: linear-gradient(90deg, #0f1828 25%, #152030 50%, #0f1828 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 4px; }
-@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-.skel-line { height: 14px; margin-bottom: 8px; }
-.skel-card { height: 70px; }
+.skel{background:linear-gradient(90deg,#0f1828 25%,#152030 50%,#0f1828 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:4px}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.skel-line{height:12px;margin-bottom:6px}
 
-/* ── Filter Bar ── */
-.filter-bar { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
-.filter-btn {
-  padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 600;
-  cursor: pointer; border: 1px solid var(--border); background: var(--panel); color: var(--muted);
-  transition: all .15s;
-}
-.filter-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(59,130,246,.1); }
-.filter-btn:hover:not(.active) { border-color: var(--accent); }
-
-/* ── Sparkline ── */
-.sparkline-wrap { height: 50px; margin-top: 6px; }
-.sparkline-wrap canvas { width: 100%; height: 100%; }
-
-/* ── Print/Export ── */
-.export-btn { font-size: 11px; }
+.filter-bar{display:flex;gap:5px;margin-bottom:10px;flex-wrap:wrap;align-items:center}
+.filter-btn{padding:3px 8px;border-radius:4px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--panel);color:var(--muted);transition:all .15s}
+.filter-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(59,130,246,.08)}
+.spark-wrap{height:48px;margin-top:4px}.spark-wrap canvas{width:100%;height:100%}
+.msg-box{padding:20px;text-align:center;color:var(--muted);font-size:12px}
+.stale-notice{font-size:10px;color:var(--yellow);background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.15);border-radius:6px;padding:5px 10px;margin-bottom:10px;display:none}
 </style>
 </head>
 <body>
 
-<!-- ═══════════════════════════════════════════════════════════════
-     HEADER
-     ═══════════════════════════════════════════════════════════════ -->
 <div class="header">
   <div class="logo">VR</div>
   <div>
-    <div class="header-title">Victoria VR — On-Chain Intelligence v2</div>
-    <div class="header-sub">ETH + BSC Bridge · Whale Tracker · NFT Land · Anomaly Detection</div>
+    <div class="header-title">Victoria VR — On-Chain Intelligence</div>
+    <div class="header-sub">ETH + BSC Bridge · Wormhole NTT · Whale Tracker · Anomaly Detection</div>
   </div>
   <div class="header-right">
+    <span id="dataSrcBadge" class="data-src-badge">—</span>
     <label class="toggle-label"><input type="checkbox" id="autoRefresh"> Auto 5m</label>
     <button class="btn" id="btnRefresh" onclick="refreshAll()">⟳ Refresh</button>
     <div class="status-dot ok" id="statusDot"></div>
-    <span class="status-label" id="statusLabel">Ready</span>
+    <span id="statusLabel">Ready</span>
     <span id="lastUpdated">—</span>
   </div>
 </div>
-
 <div id="alertBanner" class="alert-banner"></div>
 
-<!-- ═══════════════════════════════════════════════════════════════
-     MAIN CONTAINER
-     ═══════════════════════════════════════════════════════════════ -->
 <div class="container">
-  <div class="tabs" id="tabsNav">
+  <div id="staleNotice" class="stale-notice">⚠ Cached data is more than 20 minutes old. GitHub Actions may not be running yet.</div>
+
+  <div class="tabs">
     <div class="tab active" data-tab="overview">Přehled</div>
-    <div class="tab" data-tab="bridge">Bridge Monitor</div>
-    <div class="tab" data-tab="whales">Whale Tracker</div>
+    <div class="tab" data-tab="bridge">Bridge / NTT</div>
+    <div class="tab" data-tab="wormhole">Wormhole</div>
+    <div class="tab" data-tab="whales">Whales</div>
     <div class="tab" data-tab="nft">NFT Land</div>
-    <div class="tab" data-tab="alerts">Anomaly Log <span class="badge-count" id="alertCount" style="display:none">0</span></div>
+    <div class="tab" data-tab="alerts">Anomaly Log <span class="bcnt" id="alertCount" style="display:none">0</span></div>
   </div>
 
-  <!-- ═══════ TAB 1: OVERVIEW ═══════ -->
+  <!-- OVERVIEW -->
   <div class="tab-content active" id="tab-overview">
-    <div class="grid g4" id="overviewCards">
-      <div class="card"><div class="card-label">VR Cena</div><div class="card-value" id="ovPrice">—</div><div id="ovChange"></div><div class="card-sub" id="ovPriceSub"></div></div>
-      <div class="card"><div class="card-label">24h Objem</div><div class="card-value" id="ovVol">—</div><div class="card-sub" id="ovVolSub"></div></div>
+    <div class="grid g4">
+      <div class="card"><div class="card-label">VR Price</div><div class="card-value" id="ovPrice">—</div><div id="ovChange"></div><div class="card-sub" id="ovPriceSrc"></div></div>
+      <div class="card"><div class="card-label">24h Volume</div><div class="card-value" id="ovVol">—</div></div>
       <div class="card"><div class="card-label">Market Cap</div><div class="card-value" id="ovMcap">—</div></div>
       <div class="card"><div class="card-label">NTT Manager Balance</div><div class="card-value" id="ovNtt">—</div><div class="card-sub">Locked in bridge (ETH)</div></div>
     </div>
     <div class="grid g3">
-      <div class="card"><div class="card-label">Bridge Dnes — Outflow</div><div class="card-value" id="ovBridgeOut">—</div><div class="card-sub" id="ovBridgeOutSub"></div></div>
-      <div class="card"><div class="card-label">Bridge Dnes — Inflow</div><div class="card-value" id="ovBridgeIn">—</div><div class="card-sub" id="ovBridgeInSub"></div></div>
-      <div class="card"><div class="card-label">Největší Dávka Dnes</div><div class="card-value" id="ovBigBatch">—</div><div class="card-sub" id="ovBigBatchSub"></div></div>
+      <div class="card"><div class="card-label">Bridge Outflow (ETH→BSC)</div><div class="card-value" id="ovBrOut">—</div><div class="card-sub" id="ovBrOutSub"></div></div>
+      <div class="card"><div class="card-label">Bridge Inflow (BSC→ETH)</div><div class="card-value" id="ovBrIn">—</div><div class="card-sub" id="ovBrInSub"></div></div>
+      <div class="card"><div class="card-label">Largest Batch</div><div class="card-value" id="ovBig">—</div><div class="card-sub" id="ovBigSub"></div></div>
     </div>
     <div class="panel">
       <div class="panel-head"><div class="panel-dot dot-blue"></div><div class="panel-title">7-Day Price Sparkline</div></div>
-      <div style="padding: 14px;">
-        <div class="sparkline-wrap"><canvas id="sparkCanvas"></canvas></div>
-      </div>
+      <div style="padding:12px"><div class="spark-wrap"><canvas id="sparkCanvas"></canvas></div><div class="card-sub" id="sparkInfo"></div></div>
     </div>
   </div>
 
-  <!-- ═══════ TAB 2: BRIDGE MONITOR ═══════ -->
+  <!-- BRIDGE / NTT -->
   <div class="tab-content" id="tab-bridge">
-    <div class="grid g4" id="bridgeSummary">
-      <div class="card"><div class="card-label">Outflow (ETH→BSC)</div><div class="card-value c-out" id="brOut" style="color:#f0b90b">—</div><div class="card-sub" id="brOutSub"></div></div>
-      <div class="card"><div class="card-label">Inflow (BSC→ETH)</div><div class="card-value c-in" id="brIn" style="color:var(--green)">—</div><div class="card-sub" id="brInSub"></div></div>
+    <div class="grid g4">
+      <div class="card"><div class="card-label">Outflow (Lock → BSC)</div><div class="card-value" id="brOut" style="color:#f0b90b">—</div><div class="card-sub" id="brOutSub"></div></div>
+      <div class="card"><div class="card-label">Inflow (Unlock ← BSC)</div><div class="card-value" id="brIn" style="color:var(--green)">—</div><div class="card-sub" id="brInSub"></div></div>
       <div class="card"><div class="card-label">Net Flow</div><div class="card-value" id="brNet">—</div></div>
-      <div class="card"><div class="card-label">Dávek Dnes</div><div class="card-value" id="brCount" style="color:var(--accent2)">—</div></div>
+      <div class="card"><div class="card-label">Transfers (loaded)</div><div class="card-value" id="brCnt" style="color:var(--accent2)">—</div></div>
     </div>
     <div class="grid g2">
       <div class="panel">
-        <div class="panel-head"><div class="panel-dot dot-out"></div><div class="panel-title">ETH → BSC (Lock)</div><div class="panel-badge" id="lockCount">—</div></div>
-        <div class="tx-scroll" id="lockList"><div style="padding:20px;text-align:center;color:var(--muted)"><div class="skel skel-line" style="width:80%"></div><div class="skel skel-line" style="width:60%"></div><div class="skel skel-line" style="width:70%"></div></div></div>
+        <div class="panel-head"><div class="panel-dot dot-out"></div><div class="panel-title">ETH → BSC (Lock)</div><div class="panel-badge" id="lockCnt">—</div></div>
+        <div class="tx-scroll" id="lockList"><div class="msg-box"><div class="skel skel-line" style="width:80%"></div><div class="skel skel-line" style="width:60%"></div></div></div>
       </div>
       <div class="panel">
-        <div class="panel-head"><div class="panel-dot dot-in"></div><div class="panel-title">BSC → ETH (Unlock)</div><div class="panel-badge" id="unlockCount">—</div></div>
-        <div class="tx-scroll" id="unlockList"><div style="padding:20px;text-align:center;color:var(--muted)"><div class="skel skel-line" style="width:80%"></div><div class="skel skel-line" style="width:60%"></div><div class="skel skel-line" style="width:70%"></div></div></div>
+        <div class="panel-head"><div class="panel-dot dot-in"></div><div class="panel-title">BSC → ETH (Unlock)</div><div class="panel-badge" id="unlockCnt">—</div></div>
+        <div class="tx-scroll" id="unlockList"><div class="msg-box"><div class="skel skel-line" style="width:80%"></div><div class="skel skel-line" style="width:60%"></div></div></div>
       </div>
     </div>
   </div>
 
-  <!-- ═══════ TAB 3: WHALE TRACKER ═══════ -->
+  <!-- WORMHOLE -->
+  <div class="tab-content" id="tab-wormhole">
+    <div class="panel">
+      <div class="panel-head"><div class="panel-dot dot-purple"></div><div class="panel-title">Wormhole Transceiver (ETH) — Recent Transactions</div></div>
+      <div class="tbl-wrap" id="whTxList"><div class="msg-box">Loading Wormhole data…</div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><div class="panel-dot dot-blue"></div><div class="panel-title">NTT Executor — Recent Transactions</div></div>
+      <div class="tbl-wrap" id="nttExecList"><div class="msg-box">Loading NTT Executor data…</div></div>
+    </div>
+  </div>
+
+  <!-- WHALES -->
   <div class="tab-content" id="tab-whales">
     <div class="panel">
       <div class="panel-head"><div class="panel-dot dot-purple"></div><div class="panel-title">Known Wallet Watch</div></div>
-      <div id="walletWatch"><div style="padding:20px"><div class="skel skel-line" style="width:90%"></div><div class="skel skel-line" style="width:70%"></div><div class="skel skel-line" style="width:80%"></div></div></div>
+      <div id="walletWatch"><div class="msg-box"><div class="skel skel-line" style="width:90%"></div><div class="skel skel-line" style="width:70%"></div></div></div>
     </div>
     <div class="panel">
-      <div class="panel-head"><div class="panel-dot dot-blue"></div><div class="panel-title">Top VR Holders</div><div class="panel-badge" id="holdersNote">Top 20</div></div>
-      <div class="tbl-wrap" id="holdersTable"><div style="padding:20px"><div class="skel skel-line" style="width:100%"></div><div class="skel skel-line" style="width:90%"></div><div class="skel skel-line" style="width:95%"></div></div></div>
+      <div class="panel-head"><div class="panel-dot dot-blue"></div><div class="panel-title">Top VR Holders</div></div>
+      <div class="tbl-wrap" id="holdersTable"><div class="msg-box"><div class="skel skel-line" style="width:100%"></div><div class="skel skel-line" style="width:90%"></div></div></div>
     </div>
     <div class="panel">
-      <div class="panel-head"><div class="panel-dot dot-out"></div><div class="panel-title">Recent Large Transfers (&gt;50M VR)</div></div>
-      <div class="tbl-wrap" id="largeTransfers"><div style="padding:20px"><div class="skel skel-line" style="width:100%"></div><div class="skel skel-line" style="width:80%"></div></div></div>
+      <div class="panel-head"><div class="panel-dot dot-out"></div><div class="panel-title">Recent Transfers — Top 20 by Size</div></div>
+      <div class="tbl-wrap" id="lgTransfers"><div class="msg-box"><div class="skel skel-line" style="width:100%"></div></div></div>
     </div>
   </div>
 
-  <!-- ═══════ TAB 4: NFT LAND ═══════ -->
+  <!-- NFT -->
   <div class="tab-content" id="tab-nft">
-    <div class="grid g4" id="nftOverview">
-      <div class="card"><div class="card-label">Floor Price</div><div class="card-value" id="nftFloor">—</div><div class="card-sub" id="nftFloorUsd"></div></div>
+    <div class="grid g4">
+      <div class="card"><div class="card-label">Floor Price</div><div class="card-value" id="nftFloor">—</div><div class="card-sub" id="nftFloorSub"></div></div>
       <div class="card"><div class="card-label">24h Volume</div><div class="card-value" id="nftVol">—</div></div>
-      <div class="card"><div class="card-label">Total Listings</div><div class="card-value" id="nftListings">—</div></div>
+      <div class="card"><div class="card-label">Supply</div><div class="card-value" id="nftSupply">—</div></div>
       <div class="card"><div class="card-label">Holders</div><div class="card-value" id="nftHolders">—</div></div>
     </div>
     <div class="panel">
-      <div class="panel-head"><div class="panel-dot dot-blue"></div><div class="panel-title">Recent NFT Sales</div></div>
-      <div class="tbl-wrap" id="nftSales"><div style="padding:20px;text-align:center;color:var(--muted)">Loading NFT data...</div></div>
+      <div class="panel-head"><div class="panel-dot dot-blue"></div><div class="panel-title">VR Land Deployer — Recent Activity</div></div>
+      <div class="tbl-wrap" id="deployerTxs"><div class="msg-box">Loading…</div></div>
     </div>
-    <div class="panel">
-      <div class="panel-head"><div class="panel-dot dot-out"></div><div class="panel-title">VR Land Deployer Activity</div></div>
-      <div class="tbl-wrap" id="deployerActivity"><div style="padding:20px;text-align:center;color:var(--muted)">Loading deployer data...</div></div>
+    <div style="padding:14px;background:rgba(59,130,246,.04);border:1px solid rgba(59,130,246,.12);border-radius:8px;font-size:11px;color:var(--muted);margin-bottom:12px">
+      💡 NFT sales data (OpenSea) requires an API key. Add <code style="color:var(--accent)">OPENSEA_API_KEY</code> to your GitHub repo secrets, then update <code>scripts/fetch-data.js</code> to fetch sales data.
     </div>
   </div>
 
-  <!-- ═══════ TAB 5: ANOMALY LOG ═══════ -->
+  <!-- ANOMALY LOG -->
   <div class="tab-content" id="tab-alerts">
     <div class="filter-bar">
-      <span style="font-size:11px;color:var(--muted);margin-right:4px">Filter:</span>
+      <span style="font-size:10px;color:var(--muted);margin-right:3px">Filter:</span>
       <div class="filter-btn active" data-filter="all">Vše</div>
       <div class="filter-btn" data-filter="red">🔴 Kritické</div>
       <div class="filter-btn" data-filter="yellow">🟡 Varování</div>
       <div class="filter-btn" data-filter="green">🟢 Info</div>
       <div class="filter-btn" data-filter="bridge">Bridge</div>
       <div class="filter-btn" data-filter="whale">Whale</div>
-      <div class="filter-btn" data-filter="nft">NFT</div>
-      <button class="btn export-btn" onclick="exportAlerts()">📥 Export JSON</button>
+      <div class="filter-btn" data-filter="wormhole">Wormhole</div>
+      <button class="btn" style="font-size:10px" onclick="exportAlerts()">📥 Export JSON</button>
     </div>
-    <div class="panel">
-      <div id="anomalyLog"><div style="padding:30px;text-align:center;color:var(--muted)">No anomalies detected yet. Refresh to scan.</div></div>
-    </div>
+    <div class="panel"><div id="anomalyLog"><div class="msg-box">No anomalies yet. Hit Refresh.</div></div></div>
   </div>
 </div>
 
 <script>
-/* ═══════════════════════════════════════════════════════════════
-   CONSTANTS & ADDRESSES
-   ═══════════════════════════════════════════════════════════════ */
-const VR_TOKEN = '0x7d5121505149065b562C789A0145eD750e6E8cdD';
-const NTT_MANAGER = '0xC721f339fEC6aFe1C9adFc11E2ad2545aE26eA15';
-const NTT_EXECUTOR = '0xD2D9c936165a85F27a5a7e07aFb974D022B89463';
-const WORMHOLE_ETH = '0x461169e7132bAF37a42aa0CDff597d7FC29D96e5';
-const SMART_ACCOUNT = '0x49719D256A5eA16bFa579ea16E95bea9fa41A452';
-const MEXC_WALLET = '0x9642b23Ed1E01Df1092B92641051881a322F5D4E';
-const VR_DEPLOYER = '0xAe0197E27B6F6DBbcf6CdecD5aB5f1D56FE51859';
-const UNISWAP_POOL = '0x4085cAFb2c519e6bf69Ad410d91dbb6139948366';
-const MEV_BOT = '0xd862CDcfEB856C32B3C4F7563f4811D8Ddfd42e2';
+/* ─── Constants ─────────────────────────────────────────────── */
+const VR_TOKEN  = '0x7d5121505149065b562C789A0145eD750e6E8cdD';
+const NTT_MGR   = '0xC721f339fEC6aFe1C9adFc11E2ad2545aE26eA15';
+const NTT_EXEC  = '0xD2D9c936165a85F27a5a7e07aFb974D022B89463';
+const WORMHOLE  = '0x461169e7132bAF37a42aa0CDff597d7FC29D96e5';
+const SMART_ACC = '0x49719D256A5eA16bFa579ea16E95bea9fa41A452';
+const MEXC      = '0x9642b23Ed1E01Df1092B92641051881a322F5D4E';
+const DEPLOYER  = '0xAe0197E27B6F6DBbcf6CdecD5aB5f1D56FE51859';
+const UNI_POOL  = '0x4085cAFb2c519e6bf69Ad410d91dbb6139948366';
+const MEV_BOT   = '0xd862CDcfEB856C32B3C4F7563f4811D8Ddfd42e2';
+const SUPPLY    = 16_800_000_000;
+const BS        = 'https://eth.blockscout.com/api/v2';
+const CG        = 'https://api.coingecko.com/api/v3';
+const ES        = 'https://etherscan.io';
 
-const NTT_BSC = '0xa24C09efbbDd34383fa7E785a0F6234d129A1391';
-const WORMHOLE_BSC = '0x5ca3403f946c666d5ca7f8a75fc87b55cdf514d9';
+const KNOWN = {};
+[[NTT_MGR,'NTT Manager','lbl-ntt'],[NTT_EXEC,'NTT Executor','lbl-ntt'],
+ [WORMHOLE,'Wormhole ETH','lbl-wh'],[SMART_ACC,'EIP-7702 Acc','lbl-account'],
+ [MEXC,'MEXC','lbl-mexc'],[DEPLOYER,'VR Deployer','lbl-deployer'],
+ [UNI_POOL,'Uni V2 Pool','lbl-pool'],[MEV_BOT,'MEV Bot','lbl-mev']
+].forEach(([a,n,c])=>KNOWN[a.toLowerCase()]={name:n,cls:c});
 
-const BLOCKSCOUT = 'https://eth.blockscout.com/api/v2';
-const ETHERSCAN_URL = 'https://etherscan.io';
-const COINGECKO = 'https://api.coingecko.com/api/v3';
-
-const VR_DECIMALS = 18;
-const VR_TOTAL_SUPPLY = 16_800_000_000;
-
-const KNOWN_WALLETS = {
-  [NTT_MANAGER.toLowerCase()]: { name: 'NTT Manager ETH', cls: 'lbl-ntt' },
-  [NTT_EXECUTOR.toLowerCase()]: { name: 'NTT Executor', cls: 'lbl-ntt' },
-  [WORMHOLE_ETH.toLowerCase()]: { name: 'Wormhole ETH', cls: 'lbl-ntt' },
-  [SMART_ACCOUNT.toLowerCase()]: { name: 'EIP-7702 Account', cls: 'lbl-account' },
-  [MEXC_WALLET.toLowerCase()]: { name: 'MEXC Hot Wallet', cls: 'lbl-mexc' },
-  [VR_DEPLOYER.toLowerCase()]: { name: 'VR Land Deployer', cls: 'lbl-deployer' },
-  [UNISWAP_POOL.toLowerCase()]: { name: 'Uniswap V2 Pool', cls: 'lbl-pool' },
-  [MEV_BOT.toLowerCase()]: { name: 'MEV Bot', cls: 'lbl-mev' },
-  [NTT_BSC.toLowerCase()]: { name: 'NTT Manager BSC', cls: 'lbl-ntt' },
-  [WORMHOLE_BSC.toLowerCase()]: { name: 'Wormhole BSC', cls: 'lbl-ntt' },
+/* ─── State ─────────────────────────────────────────────────── */
+let D = {
+  price:null,change24h:null,vol24h:null,mcap:null,spark:[],
+  locks:[],unlocks:[],tokenMeta:null,
+  holders:[],transfers:[],wallets:[],
+  wormholeTxs:[],deployerTxs:[],
+  nftStats:null,
+  dataSource:'—', lastFetchAt:null
 };
+let autoTmr=null;
 
-/* ═══════════════════════════════════════════════════════════════
-   STATE
-   ═══════════════════════════════════════════════════════════════ */
-let state = {
-  price: null, change24h: null, volume: null, mcap: null,
-  nttBalance: null,
-  bridgeLocks: [], bridgeUnlocks: [],
-  holders: [], largeTransfers: [],
-  nftStats: null, nftSales: [], deployerTxs: [],
-  sparkData: [],
-  apiOk: true
-};
-let autoTimer = null;
-
-/* ═══════════════════════════════════════════════════════════════
-   ANOMALY ENGINE
-   ═══════════════════════════════════════════════════════════════ */
+/* ─── Anomaly Engine ────────────────────────────────────────── */
 class AnomalyEngine {
-  constructor() {
-    this.alerts = [];
-    this.idCounter = 0;
-    this.thresholds = {
-      megaBatch: 500_000_000,
-      whaleDump: 200_000_000,
-      exchangeInflow: 50_000_000,
-      nftPanicSell: 0.60,
-      bridgeFrequency: 5,
-      freshWalletThreshold: 30,
-      largeTransfer: 50_000_000,
-    };
+  constructor(){this.alerts=[];this.id=0}
+  reset(){this.alerts=[];this.id=0}
+  add(sev,mod,title,desc,txHash){
+    this.alerts.push({id:++this.id,timestamp:new Date().toISOString(),
+      severity:sev,module:mod,title,description:desc,
+      txHash:txHash||null,url:txHash?`${ES}/tx/${txHash}`:null});
   }
-
-  reset() { this.alerts = []; this.idCounter = 0; }
-
-  add(severity, module, title, description, txHash = null) {
-    this.alerts.push({
-      id: ++this.idCounter,
-      timestamp: new Date().toISOString(),
-      severity, module, title, description, txHash,
-      url: txHash ? `${ETHERSCAN_URL}/tx/${txHash}` : null
+  analyzeBridge(locks,unlocks,price){
+    const vols=locks.map(t=>pVR(t)).filter(v=>v>0);
+    const median=vols.length?vols.slice().sort((a,b)=>a-b)[Math.floor(vols.length/2)]:0;
+    locks.forEach(tx=>{
+      const vol=pVR(tx),from=(tx.from?.hash||'').toLowerCase();
+      if(median>0&&vol>median*3)
+        this.add('red','bridge','Mega Batch',`${fN(vol)} VR (${(vol/median).toFixed(1)}x median)${price?' $'+fN(vol*price,0):''}`,tx.transaction_hash);
+      if(vol>median*2&&!KNOWN[from]&&median>0)
+        this.add('yellow','bridge','Unknown Large Sender',`${sA(from)} sent ${fN(vol)} VR`,tx.transaction_hash);
     });
+    const now=Date.now(),hourAgo=now-3600000;
+    const recent=locks.filter(t=>new Date(t.timestamp).getTime()>hourAgo);
+    if(recent.length>5) this.add('yellow','bridge','High Frequency',`${recent.length} batches in last hour`);
+    const outVol=locks.reduce((s,t)=>s+pVR(t),0);
+    const inVol=unlocks.reduce((s,t)=>s+pVR(t),0);
+    if(outVol>0&&inVol/outVol>.20)
+      this.add('green','bridge','Return Flow',`${(inVol/outVol*100).toFixed(1)}% inflow vs outflow`);
   }
-
-  analyzeBridge(locks, unlocks, price) {
-    const now = Date.now();
-    const hourAgo = now - 3600000;
-    const today = new Date().toISOString().slice(0, 10);
-
-    // Mega batch check
-    locks.forEach(tx => {
-      const vol = parseVR(tx);
-      if (vol > this.thresholds.megaBatch) {
-        this.add('red', 'bridge', 'Mega Batch Detected',
-          `${fmtNum(vol)} VR ($${fmtNum(vol * (price||0), 0)}) locked to bridge. Verify sender.`,
-          tx.transaction_hash || tx.tx_hash);
-      }
-    });
-
-    // Frequency check
-    const recentLocks = locks.filter(tx => {
-      const t = new Date(tx.timestamp || tx.block_timestamp).getTime();
-      return t > hourAgo;
-    });
-    if (recentLocks.length > this.thresholds.bridgeFrequency) {
-      this.add('yellow', 'bridge', 'High Bridge Frequency',
-        `${recentLocks.length} batches in last hour (threshold: ${this.thresholds.bridgeFrequency})`);
-    }
-
-    // Unknown large sender
-    locks.forEach(tx => {
-      const vol = parseVR(tx);
-      const from = (tx.from?.hash || tx.from_address || '').toLowerCase();
-      if (vol > 100_000_000 && !KNOWN_WALLETS[from]) {
-        this.add('yellow', 'bridge', 'Unknown Large Sender',
-          `${shortAddr(from)} sent ${fmtNum(vol)} VR to bridge`,
-          tx.transaction_hash || tx.tx_hash);
-      }
-    });
-
-    // Return flow check
-    const todayLocks = locks.filter(tx => (tx.timestamp || tx.block_timestamp || '').startsWith(today));
-    const todayUnlocks = unlocks.filter(tx => (tx.timestamp || tx.block_timestamp || '').startsWith(today));
-    const outVol = todayLocks.reduce((s, tx) => s + parseVR(tx), 0);
-    const inVol = todayUnlocks.reduce((s, tx) => s + parseVR(tx), 0);
-    if (outVol > 0 && inVol / outVol > 0.20) {
-      this.add('green', 'bridge', 'Significant Return Flow',
-        `Inflow is ${(inVol/outVol*100).toFixed(1)}% of outflow today (${fmtNum(inVol)} / ${fmtNum(outVol)} VR)`);
-    }
-  }
-
-  analyzeWhales(holders, transfers, price) {
-    // Top 3 holder activity
-    const top3 = holders.slice(0, 3).map(h => (h.address?.hash || '').toLowerCase());
-    transfers.forEach(tx => {
-      const from = (tx.from?.hash || tx.from_address || '').toLowerCase();
-      const vol = parseVR(tx);
-      if (top3.includes(from) && vol > VR_TOTAL_SUPPLY * 0.01) {
-        const label = KNOWN_WALLETS[from]?.name || shortAddr(from);
-        this.add('red', 'whale', 'Top Whale Active',
-          `${label} moved ${fmtNum(vol)} VR (${(vol/VR_TOTAL_SUPPLY*100).toFixed(2)}% supply)`,
-          tx.transaction_hash || tx.tx_hash);
-      }
-    });
-
-    // Exchange inflow
-    transfers.forEach(tx => {
-      const to = (tx.to?.hash || tx.to_address || '').toLowerCase();
-      const vol = parseVR(tx);
-      if (to === MEXC_WALLET.toLowerCase() && vol > this.thresholds.exchangeInflow) {
-        this.add('yellow', 'whale', 'Exchange Inflow — Sell Pressure Watch',
-          `${fmtNum(vol)} VR sent to MEXC ($${fmtNum(vol * (price||0), 0)})`,
-          tx.transaction_hash || tx.tx_hash);
-      }
-    });
-
-    // Unknown dump setup
-    transfers.forEach(tx => {
-      const to = (tx.to?.hash || tx.to_address || '').toLowerCase();
-      const from = (tx.from?.hash || tx.from_address || '').toLowerCase();
-      const vol = parseVR(tx);
-      if (vol > this.thresholds.whaleDump && !KNOWN_WALLETS[from] && (to === MEXC_WALLET.toLowerCase() || to === UNISWAP_POOL.toLowerCase())) {
-        this.add('red', 'whale', 'Potential Dump Setup',
-          `Unknown ${shortAddr(from)} sent ${fmtNum(vol)} VR to ${KNOWN_WALLETS[to]?.name || 'exchange'}`,
-          tx.transaction_hash || tx.tx_hash);
-      }
+  analyzeWhales(holders,transfers,price){
+    const top3=holders.slice(0,3).map(h=>(h.address?.hash||'').toLowerCase());
+    transfers.forEach(tx=>{
+      const from=(tx.from?.hash||'').toLowerCase(),to=(tx.to?.hash||'').toLowerCase(),vol=pVR(tx);
+      if(top3.includes(from)&&vol/SUPPLY>.005)
+        this.add('red','whale','Top Whale Active',`${KNOWN[from]?.name||sA(from)} moved ${fN(vol)} VR`,tx.transaction_hash);
+      if(to===MEXC.toLowerCase()&&vol>1_000_000)
+        this.add('yellow','whale','MEXC Inflow',`${fN(vol)} VR → MEXC${price?' $'+fN(vol*price,0):''}`,tx.transaction_hash);
     });
   }
-
-  analyzeNFT(sales, floorPrice) {
-    if (!floorPrice || !sales.length) return;
-
-    // Panic sells
-    sales.forEach(s => {
-      if (s.price && s.price < floorPrice * this.thresholds.nftPanicSell) {
-        this.add('red', 'nft', 'Distress Sale or Manipulation',
-          `Land sold at ${s.price.toFixed(4)} ETH (floor: ${floorPrice.toFixed(4)} ETH, ${(s.price/floorPrice*100).toFixed(0)}%)`,
-          s.txHash);
-      }
-    });
-
-    // Mass seller
-    const sellerCounts = {};
-    sales.forEach(s => { if (s.seller) { sellerCounts[s.seller] = (sellerCounts[s.seller]||0)+1; } });
-    Object.entries(sellerCounts).forEach(([addr, cnt]) => {
-      if (cnt > 5) {
-        this.add('red', 'nft', 'Mass NFT Sell-off',
-          `${shortAddr(addr)} sold ${cnt} Lands — monitor for dump pattern`);
-      }
-    });
-
-    // Volume spike (simplified — compare to average)
-    const totalVol = sales.reduce((s, x) => s + (x.price || 0), 0);
-    if (sales.length > 10 && totalVol > floorPrice * sales.length * 3) {
-      this.add('yellow', 'nft', 'Unusual NFT Volume',
-        `Total volume ${totalVol.toFixed(2)} ETH across ${sales.length} sales`);
-    }
+  analyzeWormhole(txs){
+    const methods=['receiveMessage','sendMessage','transfer','attestToken'];
+    const unusual=txs.filter(tx=>tx.status==='error'||tx.status==='failed');
+    if(unusual.length>0)
+      this.add('red','wormhole','Wormhole Tx Failures',`${unusual.length} failed transactions on Wormhole transceiver`);
+    if(txs.length>15)
+      this.add('yellow','wormhole','High Wormhole Activity',`${txs.length} recent transactions on Wormhole transceiver`);
   }
 }
+const engine=new AnomalyEngine();
 
-const engine = new AnomalyEngine();
-
-/* ═══════════════════════════════════════════════════════════════
-   UTILITY FUNCTIONS
-   ═══════════════════════════════════════════════════════════════ */
-async function fetchJ(url, fallback = null) {
-  try {
-    const res = await fetch(url, { headers: { 'Accept': 'application/json' }, signal: AbortSignal.timeout(10000) });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return await res.json();
-  } catch (e) {
-    console.warn(`[API] ${url}`, e.message);
-    return fallback;
-  }
+/* ─── Utilities ─────────────────────────────────────────────── */
+async function fJ(url,fb=null){
+  try{
+    const r=await fetch(url,{headers:{'Accept':'application/json'},signal:AbortSignal.timeout(12000)});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    return await r.json();
+  }catch(e){console.warn('[API]',url.slice(0,80),e.message);return fb;}
 }
 
-function parseVR(tx) {
-  const raw = tx.total?.value || tx.value || '0';
-  return Number(raw) / 1e18;
+function pVR(tx){
+  try{return Number(BigInt(tx.total?.value||tx.value||'0'))/1e18;}
+  catch{return 0;}
 }
-
-function fmtNum(n, dec = 0) {
-  if (n == null || isNaN(n)) return '—';
-  if (n >= 1e9) return (n/1e9).toFixed(1) + 'B';
-  if (n >= 1e6) return (n/1e6).toFixed(1) + 'M';
-  if (n >= 1e3) return (n/1e3).toFixed(1) + 'K';
+function fN(n,dec=0){
+  if(n==null||isNaN(n))return'—';
+  if(Math.abs(n)>=1e9)return(n/1e9).toFixed(1)+'B';
+  if(Math.abs(n)>=1e6)return(n/1e6).toFixed(1)+'M';
+  if(Math.abs(n)>=1e3)return(n/1e3).toFixed(1)+'K';
   return n.toFixed(dec);
 }
+function fUsd(n){return n==null?'—':'$'+fN(n,n<1?6:2);}
+function sA(a){return a?a.slice(0,6)+'…'+a.slice(-4):'—';}
 
-function fmtUsd(n) {
-  if (n == null) return '—';
-  return '$' + fmtNum(n, n < 1 ? 6 : 2);
-}
-
-function shortAddr(a) {
-  if (!a) return '—';
-  return a.slice(0, 6) + '…' + a.slice(-4);
-}
-
-function addrLabel(a) {
-  if (!a) return '';
-  const k = KNOWN_WALLETS[a.toLowerCase()];
-  return k ? `<span class="lbl ${k.cls}">${k.name}</span>` : '';
-}
-
-function etherscanAddr(a) {
-  return `${ETHERSCAN_URL}/address/${a}`;
-}
-function etherscanTx(h) {
-  return `${ETHERSCAN_URL}/tx/${h}`;
-}
-function blockscoutAddr(a) {
-  return `https://eth.blockscout.com/address/${a}`;
+function lblFromObj(obj){
+  if(!obj)return null;
+  const h=(obj.hash||'').toLowerCase();
+  if(KNOWN[h])return KNOWN[h];
+  const tags=obj.metadata?.tags;
+  if(tags?.length){
+    const nt=tags.find(t=>t.tagType==='name');
+    if(nt){const isEx=tags.some(t=>t.name==='Exchange');return{name:nt.name,cls:isEx?'lbl-exchange':'lbl-unknown'};}
+  }
+  if(obj.name==='StakeVR')return{name:'StakeVR',cls:'lbl-stake'};
+  if(obj.name&&!['ERC1967Proxy','GnosisSafeProxy'].includes(obj.name))return{name:obj.name,cls:'lbl-unknown'};
+  return null;
 }
 
-function addrHTML(a) {
-  if (!a) return '—';
-  const label = addrLabel(a);
-  return `${label} <a class="addr-link" href="${etherscanAddr(a)}" target="_blank" title="${a}">${shortAddr(a)}</a><span class="copy-btn" onclick="copyAddr('${a}',event)" title="Copy">📋</span>`;
+function addrH(obj){
+  const hash=typeof obj==='string'?obj:obj?.hash;
+  if(!hash)return'—';
+  const l=typeof obj==='object'?lblFromObj(obj):(KNOWN[hash.toLowerCase()]||null);
+  const lb=l?`<span class="lbl ${l.cls}">${l.name}</span>`:'';
+  return `${lb}<a class="addr-link" href="${ES}/address/${hash}" target="_blank" title="${hash}">${sA(hash)}</a><span class="copy-btn" onclick="cpy('${hash}',event)">📋</span>`;
 }
 
-function copyAddr(addr, e) {
-  e?.preventDefault(); e?.stopPropagation();
-  navigator.clipboard.writeText(addr).then(() => {
-    const el = e?.target;
-    if (el) { el.textContent = '✓'; setTimeout(() => el.textContent = '📋', 1200); }
+function cpy(t,e){
+  e?.preventDefault();e?.stopPropagation();
+  navigator.clipboard.writeText(t).then(()=>{
+    if(e?.target){e.target.textContent='✓';setTimeout(()=>e.target.textContent='📋',1000);}
   });
 }
 
-function timeAgo(ts) {
-  if (!ts) return '';
-  const d = new Date(ts);
-  const utc = d.toISOString().slice(11, 16) + ' UTC';
-  const date = d.toISOString().slice(0, 10);
-  return `<span class="tx-date">${date}</span><br>${utc}`;
+function tCell(ts){
+  if(!ts)return'';
+  const d=new Date(ts);
+  return `<span class="tx-time-date">${d.toISOString().slice(0,10)}</span><br>${d.toISOString().slice(11,16)} UTC`;
 }
 
-function setStatus(ok) {
-  const dot = document.getElementById('statusDot');
-  const lbl = document.getElementById('statusLabel');
-  dot.className = ok ? 'status-dot ok' : 'status-dot err';
-  lbl.textContent = ok ? 'Live' : 'API Error';
-  state.apiOk = ok;
+function setStatus(ok,stale=false){
+  const dot=document.getElementById('statusDot');
+  const lbl=document.getElementById('statusLabel');
+  dot.className='status-dot '+(stale?'stale':ok?'ok':'err');
+  lbl.textContent=stale?'Stale data':ok?'Live':'Error';
+  lbl.style.color=stale?'var(--yellow)':ok?'var(--muted)':'var(--red)';
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   DATA FETCHING
-   ═══════════════════════════════════════════════════════════════ */
-async function fetchPrice() {
-  const d = await fetchJ(`${COINGECKO}/simple/price?ids=victoria-vr&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&include_market_cap=true`);
-  if (d?.['victoria-vr']) {
-    const v = d['victoria-vr'];
-    state.price = v.usd;
-    state.change24h = v.usd_24h_change;
-    state.volume = v.usd_24h_vol;
-    state.mcap = v.usd_market_cap;
-  }
-}
-
-async function fetchSparkline() {
-  const d = await fetchJ(`${COINGECKO}/coins/victoria-vr/market_chart?vs_currency=usd&days=7&interval=daily`);
-  if (d?.prices) {
-    state.sparkData = d.prices.map(p => p[1]);
-  }
-}
-
-async function fetchNttBalance() {
-  const d = await fetchJ(`${BLOCKSCOUT}/addresses/${NTT_MANAGER}/token-balances`);
-  if (d && Array.isArray(d)) {
-    const vrBal = d.find(t => t.token?.address?.toLowerCase() === VR_TOKEN.toLowerCase());
-    if (vrBal) {
-      state.nttBalance = Number(vrBal.value) / 1e18;
+/* ─── Data loading: cached JSON first, live API fallback ────── */
+async function loadData(){
+  // Try loading from data/ (GitHub Actions cache — works same-origin)
+  const manifest=await fJ('./data/manifest.json');
+  if(manifest?.data?.last_fetch){
+    const age=(Date.now()-new Date(manifest.data.last_fetch).getTime())/60000;
+    D.lastFetchAt=manifest.data.last_fetch;
+    if(age<25){
+      // Fresh cache — load all from data/
+      await loadFromCache();
+      D.dataSource='cached';
+      document.getElementById('dataSrcBadge').textContent='📦 Cached ('+Math.round(age)+'m ago)';
+      document.getElementById('dataSrcBadge').className='data-src-badge cached';
+      if(age>15) document.getElementById('staleNotice').style.display='block';
+      return true;
     }
   }
+  // Cache stale or missing — fall back to live API
+  await loadFromLiveAPI();
+  D.dataSource='live';
+  document.getElementById('dataSrcBadge').textContent='🔴 Live API';
+  document.getElementById('dataSrcBadge').className='data-src-badge live';
+  return true;
 }
 
-async function fetchBridgeLocks() {
-  const d = await fetchJ(`${BLOCKSCOUT}/addresses/${NTT_MANAGER}/token-transfers?token=${VR_TOKEN}&type=ERC-20&limit=50`);
-  if (d?.items) {
-    state.bridgeLocks = d.items.filter(tx => {
-      const to = (tx.to?.hash || '').toLowerCase();
-      return to === NTT_MANAGER.toLowerCase();
-    });
-    state.bridgeUnlocks = d.items.filter(tx => {
-      const from = (tx.from?.hash || '').toLowerCase();
-      return from === NTT_MANAGER.toLowerCase();
-    });
+async function loadFromCache(){
+  const [bridge,holders,transfers,price,wallets,deployer,wormhole]=await Promise.all([
+    fJ('./data/bridge.json'),fJ('./data/holders.json'),fJ('./data/transfers.json'),
+    fJ('./data/price.json'),fJ('./data/wallets.json'),fJ('./data/deployer.json'),
+    fJ('./data/wormhole.json'),
+  ]);
+
+  if(bridge?.data){
+    D.locks=bridge.data.locks||[];D.unlocks=bridge.data.unlocks||[];D.tokenMeta=bridge.data.tokenMeta;
   }
+  if(holders?.data)D.holders=holders.data.holders||[];
+  if(transfers?.data)D.transfers=transfers.data.transfers||[];
+  if(price?.data){
+    const p=price.data.price;
+    if(p){D.price=p.usd;D.change24h=p.usd_24h_change;D.vol24h=p.usd_24h_vol;D.mcap=p.usd_market_cap;}
+    D.spark=price.data.sparkline||[];
+  }
+  if(wallets?.data)D.wallets=wallets.data.wallets||[];
+  if(deployer?.data)D.deployerTxs=deployer.data.transactions||[];
+  if(wormhole?.data)D.wormholeTxs=wormhole.data.transactions||[];
 }
 
-async function fetchHolders() {
-  const d = await fetchJ(`${BLOCKSCOUT}/tokens/${VR_TOKEN}/holders?limit=20`);
-  if (d?.items) {
-    state.holders = d.items;
-  }
-}
+async function loadFromLiveAPI(){
+  const nttLow=NTT_MGR.toLowerCase();
+  const[bridge,holders,transfers,price,spark,deployer,wormhole]=await Promise.allSettled([
+    fJ(`${BS}/addresses/${NTT_MGR}/token-transfers?token=${VR_TOKEN}&type=ERC-20&limit=50`),
+    fJ(`${BS}/tokens/${VR_TOKEN}/holders`),
+    fJ(`${BS}/tokens/${VR_TOKEN}/transfers?limit=50`),
+    fJ(`${CG}/simple/price?ids=victoria-vr&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&include_market_cap=true`),
+    fJ(`${CG}/coins/victoria-vr/market_chart?vs_currency=usd&days=7&interval=daily`),
+    fJ(`${BS}/addresses/${DEPLOYER}/transactions?limit=10`),
+    fJ(`${BS}/addresses/${WORMHOLE}/transactions?limit=20`),
+  ]);
 
-async function fetchLargeTransfers() {
-  const d = await fetchJ(`${BLOCKSCOUT}/tokens/${VR_TOKEN}/transfers?limit=50`);
-  if (d?.items) {
-    state.largeTransfers = d.items.filter(tx => parseVR(tx) > 50_000_000);
+  if(bridge.value?.items){
+    D.locks=bridge.value.items.filter(tx=>(tx.to?.hash||'').toLowerCase()===nttLow);
+    D.unlocks=bridge.value.items.filter(tx=>(tx.from?.hash||'').toLowerCase()===nttLow);
+    D.tokenMeta=bridge.value.items[0]?.token||null;
   }
-}
+  if(holders.value?.items)D.holders=holders.value.items;
+  if(transfers.value?.items)D.transfers=transfers.value.items;
+  const p=price.value?.['victoria-vr'];
+  if(p){D.price=p.usd;D.change24h=p.usd_24h_change;D.vol24h=p.usd_24h_vol;D.mcap=p.usd_market_cap;}
+  if(spark.value?.prices)D.spark=spark.value.prices.map(x=>x[1]);
+  if(deployer.value?.items)D.deployerTxs=deployer.value.items;
+  if(wormhole.value?.items)D.wormholeTxs=wormhole.value.items;
 
-async function fetchNFTStats() {
-  // Try OpenSea first
-  let d = await fetchJ('https://api.opensea.io/api/v2/collections/victoria-vr-land/stats');
-  if (d) {
-    state.nftStats = {
-      floor: d.total?.floor_price ?? d.floor_price ?? null,
-      volume24h: d.total?.volume ?? d.intervals?.[0]?.volume ?? null,
-      listings: d.total?.num_owners ?? null,
-      holders: d.total?.num_owners ?? null,
-    };
-  }
-  // Fallback to CoinGecko
-  if (!state.nftStats || !state.nftStats.floor) {
-    const cg = await fetchJ(`${COINGECKO}/nfts/victoria-vr-land`);
-    if (cg) {
-      state.nftStats = {
-        floor: cg.floor_price?.native_currency ?? null,
-        floorUsd: cg.floor_price?.usd ?? null,
-        volume24h: cg.volume_24h?.native_currency ?? null,
-        listings: cg.total_supply ?? null,
-        holders: cg.number_of_unique_addresses ?? null,
-      };
+  // Live wallet balances
+  D.wallets=await Promise.all([
+    {addr:MEXC,name:'MEXC',cls:'lbl-mexc'},{addr:SMART_ACC,name:'EIP-7702 Acc',cls:'lbl-account'},
+    {addr:NTT_MGR,name:'NTT Manager',cls:'lbl-ntt'},{addr:DEPLOYER,name:'VR Deployer',cls:'lbl-deployer'},
+    {addr:MEV_BOT,name:'MEV Bot',cls:'lbl-mev'},{addr:UNI_POOL,name:'Uni V2 Pool',cls:'lbl-pool'},
+  ].map(async w=>{
+    const d=await fJ(`${BS}/addresses/${w.addr}/token-balances`);
+    let bal='0';
+    if(Array.isArray(d)){
+      const vr=d.find(t=>(t.token?.address_hash||t.token?.address||'').toLowerCase()===VR_TOKEN.toLowerCase());
+      if(vr)bal=vr.value;
     }
-  }
-  if (!state.nftStats) {
-    state.nftStats = { floor: null, volume24h: null, listings: null, holders: null, note: 'NFT data unavailable — API may require key' };
-  }
+    return{...w,balance:bal};
+  }));
+
+  // Fallback price from Blockscout token meta
+  if(!D.price&&D.tokenMeta?.exchange_rate)D.price=parseFloat(D.tokenMeta.exchange_rate);
+  if(!D.vol24h&&D.tokenMeta?.volume_24h)D.vol24h=parseFloat(D.tokenMeta.volume_24h);
 }
 
-async function fetchNFTSales() {
-  const d = await fetchJ('https://api.opensea.io/api/v2/events/collection/victoria-vr-land?event_type=sale&limit=20');
-  if (d?.asset_events) {
-    state.nftSales = d.asset_events.map(e => ({
-      time: e.event_timestamp || e.created_date,
-      tokenId: e.nft?.identifier || e.nft?.token_id || '?',
-      price: e.payment?.quantity ? Number(e.payment.quantity) / 1e18 : null,
-      seller: e.seller || e.from_account?.address,
-      buyer: e.buyer || e.to_account?.address,
-      txHash: e.transaction?.hash || null,
-    }));
-  }
-}
-
-async function fetchDeployerActivity() {
-  const d = await fetchJ(`${BLOCKSCOUT}/addresses/${VR_DEPLOYER}/transactions?limit=10`);
-  if (d?.items) {
-    state.deployerTxs = d.items;
-  }
-}
-
-async function fetchWalletBalances() {
-  const watchList = [
-    { addr: MEXC_WALLET, name: 'MEXC Hot Wallet', cls: 'lbl-mexc' },
-    { addr: SMART_ACCOUNT, name: 'EIP-7702 Account', cls: 'lbl-account' },
-    { addr: NTT_MANAGER, name: 'NTT Manager ETH', cls: 'lbl-ntt' },
-    { addr: VR_DEPLOYER, name: 'VR Land Deployer', cls: 'lbl-deployer' },
-    { addr: MEV_BOT, name: 'MEV Bot', cls: 'lbl-mev' },
-    { addr: UNISWAP_POOL, name: 'Uniswap V2 Pool', cls: 'lbl-pool' },
-  ];
-  const results = await Promise.allSettled(
-    watchList.map(async w => {
-      const d = await fetchJ(`${BLOCKSCOUT}/addresses/${w.addr}/token-balances`);
-      let bal = 0;
-      if (d && Array.isArray(d)) {
-        const vrBal = d.find(t => t.token?.address?.toLowerCase() === VR_TOKEN.toLowerCase());
-        if (vrBal) bal = Number(vrBal.value) / 1e18;
-      }
-      return { ...w, balance: bal };
-    })
-  );
-  return results.filter(r => r.status === 'fulfilled').map(r => r.value);
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   RENDER FUNCTIONS
-   ═══════════════════════════════════════════════════════════════ */
-function renderOverview() {
-  const p = state.price;
-  document.getElementById('ovPrice').textContent = p != null ? `$${p.toFixed(6)}` : '—';
-  const ch = state.change24h;
-  const chEl = document.getElementById('ovChange');
-  if (ch != null) {
-    const cls = ch >= 0 ? 'up' : 'down';
-    chEl.innerHTML = `<span class="change ${cls}">${ch >= 0 ? '+' : ''}${ch.toFixed(2)}%</span>`;
-  }
-  document.getElementById('ovPriceSub').textContent = p ? `CoinGecko live` : '';
-  document.getElementById('ovVol').textContent = state.volume != null ? fmtUsd(state.volume) : '—';
-  document.getElementById('ovMcap').textContent = state.mcap != null ? fmtUsd(state.mcap) : '—';
-  document.getElementById('ovNtt').textContent = state.nttBalance != null ? fmtNum(state.nttBalance) + ' VR' : '—';
-
-  // Bridge summary for today
-  const today = new Date().toISOString().slice(0, 10);
-  const todayLocks = state.bridgeLocks.filter(tx => (tx.timestamp||'').startsWith(today));
-  const todayUnlocks = state.bridgeUnlocks.filter(tx => (tx.timestamp||'').startsWith(today));
-  const outVol = todayLocks.reduce((s, tx) => s + parseVR(tx), 0);
-  const inVol = todayUnlocks.reduce((s, tx) => s + parseVR(tx), 0);
-  document.getElementById('ovBridgeOut').textContent = fmtNum(outVol) + ' VR';
-  document.getElementById('ovBridgeOutSub').textContent = `${todayLocks.length} batches today`;
-  document.getElementById('ovBridgeIn').textContent = fmtNum(inVol) + ' VR';
-  document.getElementById('ovBridgeInSub').textContent = `${todayUnlocks.length} unlocks today`;
-
-  const biggest = todayLocks.reduce((max, tx) => Math.max(max, parseVR(tx)), 0);
-  document.getElementById('ovBigBatch').textContent = biggest > 0 ? fmtNum(biggest) + ' VR' : '—';
-  document.getElementById('ovBigBatchSub').textContent = biggest > 0 ? `$${fmtNum(biggest * (p||0), 0)}` : '';
-
-  // Sparkline
+/* ─── Renders ───────────────────────────────────────────────── */
+function renderOverview(){
+  const p=D.price;
+  document.getElementById('ovPrice').textContent=p?`$${p<0.01?p.toFixed(6):p.toFixed(4)}`:'—';
+  const chEl=document.getElementById('ovChange');
+  if(D.change24h!=null){const c=D.change24h;chEl.innerHTML=`<span class="change ${c>=0?'up':'down'}">${c>=0?'+':''}${c.toFixed(2)}%</span>`;}
+  document.getElementById('ovPriceSrc').textContent=D.dataSource==='cached'?'GitHub Actions cache':'CoinGecko/Blockscout live';
+  document.getElementById('ovVol').textContent=D.vol24h?fUsd(D.vol24h):'—';
+  document.getElementById('ovMcap').textContent=D.mcap?fUsd(D.mcap):(p?fUsd(p*SUPPLY):'—');
+  const nttW=D.wallets.find(w=>w.addr===NTT_MGR);
+  if(nttW)document.getElementById('ovNtt').textContent=fN(Number(BigInt(nttW.balance||'0'))/1e18)+' VR';
+  const outVol=D.locks.reduce((s,t)=>s+pVR(t),0);
+  const inVol=D.unlocks.reduce((s,t)=>s+pVR(t),0);
+  document.getElementById('ovBrOut').textContent=fN(outVol)+' VR';
+  document.getElementById('ovBrOutSub').textContent=`${D.locks.length} batches`+(p?` · $${fN(outVol*p,0)}`:'');
+  document.getElementById('ovBrIn').textContent=fN(inVol)+' VR';
+  document.getElementById('ovBrInSub').textContent=`${D.unlocks.length} unlocks`+(p?` · $${fN(inVol*p,0)}`:'');
+  const big=D.locks.reduce((m,t)=>Math.max(m,pVR(t)),0);
+  document.getElementById('ovBig').textContent=big>0?fN(big)+' VR':'—';
+  document.getElementById('ovBigSub').textContent=big>0&&p?'$'+fN(big*p,0):'';
   drawSparkline();
 }
 
-function drawSparkline() {
-  const canvas = document.getElementById('sparkCanvas');
-  if (!canvas || !state.sparkData.length) return;
-  const ctx = canvas.getContext('2d');
-  const dpr = window.devicePixelRatio || 1;
-  const rect = canvas.parentElement.getBoundingClientRect();
-  canvas.width = rect.width * dpr;
-  canvas.height = rect.height * dpr;
-  canvas.style.width = rect.width + 'px';
-  canvas.style.height = rect.height + 'px';
-  ctx.scale(dpr, dpr);
-
-  const data = state.sparkData;
-  const w = rect.width, h = rect.height;
-  const min = Math.min(...data), max = Math.max(...data);
-  const range = max - min || 1;
-  const pad = 4;
-
-  ctx.clearRect(0, 0, w, h);
-  ctx.beginPath();
-  data.forEach((v, i) => {
-    const x = pad + (i / (data.length - 1)) * (w - 2 * pad);
-    const y = h - pad - ((v - min) / range) * (h - 2 * pad);
-    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-  });
-  ctx.strokeStyle = data[data.length - 1] >= data[0] ? '#22c55e' : '#ef4444';
-  ctx.lineWidth = 2;
-  ctx.stroke();
-
-  // Fill under
-  const lastX = pad + (w - 2 * pad);
-  ctx.lineTo(lastX, h);
-  ctx.lineTo(pad, h);
-  ctx.closePath();
-  const grad = ctx.createLinearGradient(0, 0, 0, h);
-  const col = data[data.length - 1] >= data[0] ? '34,197,94' : '239,68,68';
-  grad.addColorStop(0, `rgba(${col},0.15)`);
-  grad.addColorStop(1, `rgba(${col},0)`);
-  ctx.fillStyle = grad;
-  ctx.fill();
+function drawSparkline(){
+  const cv=document.getElementById('sparkCanvas');
+  if(!cv||!D.spark.length)return;
+  const ctx=cv.getContext('2d');const dpr=devicePixelRatio||1;
+  const rect=cv.parentElement.getBoundingClientRect();
+  cv.width=rect.width*dpr;cv.height=rect.height*dpr;
+  cv.style.width=rect.width+'px';cv.style.height=rect.height+'px';ctx.scale(dpr,dpr);
+  const data=D.spark,w=rect.width,h=rect.height;
+  const mn=Math.min(...data),mx=Math.max(...data),rng=mx-mn||1,pd=4;
+  ctx.clearRect(0,0,w,h);ctx.beginPath();
+  data.forEach((v,i)=>{const x=pd+(i/(data.length-1))*(w-2*pd);const y=h-pd-((v-mn)/rng)*(h-2*pd);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+  const up=data[data.length-1]>=data[0];
+  ctx.strokeStyle=up?'#22c55e':'#ef4444';ctx.lineWidth=2;ctx.stroke();
+  ctx.lineTo(pd+(w-2*pd),h);ctx.lineTo(pd,h);ctx.closePath();
+  const g=ctx.createLinearGradient(0,0,0,h);const c=up?'34,197,94':'239,68,68';
+  g.addColorStop(0,`rgba(${c},0.12)`);g.addColorStop(1,`rgba(${c},0)`);ctx.fillStyle=g;ctx.fill();
+  document.getElementById('sparkInfo').textContent=`Low: $${Math.min(...data).toFixed(6)} · High: $${Math.max(...data).toFixed(6)}`;
 }
 
-function renderBridge() {
-  const locks = state.bridgeLocks;
-  const unlocks = state.bridgeUnlocks;
-  const today = new Date().toISOString().slice(0, 10);
-  const todayL = locks.filter(tx => (tx.timestamp||'').startsWith(today));
-  const todayU = unlocks.filter(tx => (tx.timestamp||'').startsWith(today));
-  const outVol = todayL.reduce((s, tx) => s + parseVR(tx), 0);
-  const inVol = todayU.reduce((s, tx) => s + parseVR(tx), 0);
+function renderBridge(){
+  const p=D.price;
+  const outVol=D.locks.reduce((s,t)=>s+pVR(t),0);
+  const inVol=D.unlocks.reduce((s,t)=>s+pVR(t),0);
+  document.getElementById('brOut').textContent=fN(outVol)+' VR';
+  document.getElementById('brOutSub').textContent=p?'$'+fN(outVol*p,0):'';
+  document.getElementById('brIn').textContent=fN(inVol)+' VR';
+  document.getElementById('brInSub').textContent=p?'$'+fN(inVol*p,0):'';
+  const net=outVol-inVol;
+  document.getElementById('brNet').textContent=(net>0?'+':'')+fN(net)+' VR';
+  document.getElementById('brNet').style.color=net>0?'#f0b90b':'var(--green)';
+  document.getElementById('brCnt').textContent=D.locks.length+D.unlocks.length;
+  document.getElementById('lockCnt').textContent=D.locks.length+' txs';
+  document.getElementById('unlockCnt').textContent=D.unlocks.length+' txs';
 
-  document.getElementById('brOut').textContent = fmtNum(outVol) + ' VR';
-  document.getElementById('brOutSub').textContent = state.price ? `$${fmtNum(outVol * state.price, 0)}` : '';
-  document.getElementById('brIn').textContent = fmtNum(inVol) + ' VR';
-  document.getElementById('brInSub').textContent = state.price ? `$${fmtNum(inVol * state.price, 0)}` : '';
-  document.getElementById('brNet').textContent = fmtNum(outVol - inVol) + ' VR';
-  document.getElementById('brNet').style.color = outVol > inVol ? '#f0b90b' : 'var(--green)';
-  document.getElementById('brCount').textContent = todayL.length + todayU.length;
-  document.getElementById('lockCount').textContent = locks.length + ' txs';
-  document.getElementById('unlockCount').textContent = unlocks.length + ' txs';
+  const vols=D.locks.map(t=>pVR(t)).filter(v=>v>0).sort((a,b)=>a-b);
+  const med=vols.length?vols[Math.floor(vols.length/2)]:0;
 
-  document.getElementById('lockList').innerHTML = locks.length ? locks.map(tx => bridgeTxRow(tx, 'out')).join('') : '<div style="padding:20px;text-align:center;color:var(--muted)">No lock transactions found</div>';
-  document.getElementById('unlockList').innerHTML = unlocks.length ? unlocks.map(tx => bridgeTxRow(tx, 'in')).join('') : '<div style="padding:20px;text-align:center;color:var(--muted)">No unlock transactions found</div>';
+  document.getElementById('lockList').innerHTML=D.locks.length?
+    D.locks.map(tx=>brRow(tx,'out',med,p)).join(''):
+    '<div class="msg-box">No lock transactions in data</div>';
+  document.getElementById('unlockList').innerHTML=D.unlocks.length?
+    D.unlocks.map(tx=>brRow(tx,'in',med,p)).join(''):
+    '<div class="msg-box">No unlock transactions in data</div>';
 }
 
-function bridgeTxRow(tx, dir) {
-  const vol = parseVR(tx);
-  const usd = state.price ? vol * state.price : null;
-  const from = tx.from?.hash || '';
-  const to = tx.to?.hash || '';
-  const addr = dir === 'out' ? from : to;
-  const hash = tx.transaction_hash || tx.tx_hash || '';
-  const ts = tx.timestamp || tx.block_timestamp || '';
-
-  let flag = '';
-  if (vol > 500_000_000) flag = '<div class="tx-flag"><span class="lbl" style="background:rgba(239,68,68,.15);color:var(--red)">🔴 MEGA</span></div>';
-  else if (vol > 200_000_000) flag = '<div class="tx-flag"><span class="lbl" style="background:rgba(245,158,11,.1);color:var(--yellow)">🟡 LARGE</span></div>';
-
+function brRow(tx,dir,med,p){
+  const vol=pVR(tx),usd=p?vol*p:null;
+  const peer=dir==='out'?tx.from:tx.to;
+  const hash=tx.transaction_hash||'';
+  let flag='';
+  if(med>0&&vol>med*3)flag='<div class="tx-flag"><span class="lbl" style="background:rgba(239,68,68,.12);color:var(--red)">🔴 MEGA</span></div>';
+  else if(med>0&&vol>med*2)flag='<div class="tx-flag"><span class="lbl" style="background:rgba(245,158,11,.08);color:var(--yellow)">🟡 LARGE</span></div>';
   return `<div class="tx-row">
-    <div class="tx-time">${timeAgo(ts)}</div>
+    <div class="tx-time">${tCell(tx.timestamp)}</div>
     <div>
-      <div class="tx-amount ${dir}">${fmtNum(vol)} VR</div>
-      <div class="tx-addr">${addrHTML(addr)}</div>
-      <a class="tx-hash-link" href="${etherscanTx(hash)}" target="_blank">${shortAddr(hash)}</a>
-      ${flag}
+      <div class="tx-amount ${dir}">${fN(vol)} VR</div>
+      <div class="tx-addr">${addrH(peer)}</div>
+      <a class="tx-hash-link" href="${ES}/tx/${hash}" target="_blank">${sA(hash)}</a>${flag}
     </div>
-    <div class="tx-right">
-      <div class="tx-usd">${usd != null ? '$'+fmtNum(usd,0) : ''}</div>
-    </div>
+    <div class="tx-right"><div class="tx-usd">${usd!=null?'$'+fN(usd,0):''}</div></div>
   </div>`;
 }
 
-function renderWhales(walletData) {
-  // Wallet Watch
-  const wwEl = document.getElementById('walletWatch');
-  if (walletData && walletData.length) {
-    wwEl.innerHTML = walletData.map(w => `<div class="wallet-row">
-      <span class="wallet-name"><span class="lbl ${w.cls}">${w.name}</span></span>
-      <a class="addr-link" href="${etherscanAddr(w.addr)}" target="_blank">${shortAddr(w.addr)}</a>
-      <span class="copy-btn" onclick="copyAddr('${w.addr}',event)">📋</span>
-      <span class="wallet-bal">${fmtNum(w.balance)} VR</span>
-      <span style="color:var(--muted);font-size:10px;min-width:80px;text-align:right">${state.price ? '$'+fmtNum(w.balance*state.price,0) : ''}</span>
-      <a href="${etherscanAddr(w.addr)}" target="_blank" style="font-size:10px">↗</a>
-    </div>`).join('');
-  }
+function renderWormhole(){
+  const txs=D.wormholeTxs;
+  const p=D.price;
+  const whEl=document.getElementById('whTxList');
+  if(txs.length){
+    whEl.innerHTML=`<table><thead><tr><th>Time</th><th>Method</th><th>From</th><th>To</th><th>Status</th><th>Tx</th></tr></thead><tbody>
+    ${txs.map(tx=>{
+      const h=tx.hash||'';const ts=tx.timestamp?new Date(tx.timestamp).toISOString().slice(0,16).replace('T',' '):' —';
+      const method=tx.method||'—';
+      const status=tx.status==='ok'?'<span class="lbl" style="background:rgba(34,197,94,.1);color:var(--green)">✓ ok</span>':
+        tx.status?`<span class="lbl" style="background:rgba(239,68,68,.12);color:var(--red)">✗ ${tx.status}</span>`:'—';
+      return`<tr>
+        <td style="font-size:10px;white-space:nowrap">${ts}</td>
+        <td><span class="lbl lbl-wh">${method}</span></td>
+        <td>${addrH(tx.from)}</td><td>${tx.to?addrH(tx.to):'—'}</td>
+        <td>${status}</td>
+        <td><a href="${ES}/tx/${h}" target="_blank" class="addr-link">${sA(h)}</a></td>
+      </tr>`;
+    }).join('')}</tbody></table>`;
+  }else{whEl.innerHTML='<div class="msg-box">No Wormhole transactions in data</div>';}
 
-  // Holders table
-  const holders = state.holders;
-  const htEl = document.getElementById('holdersTable');
-  if (holders.length) {
-    htEl.innerHTML = `<table><thead><tr><th>#</th><th>Address</th><th>Balance</th><th>% Supply</th><th>USD</th><th></th></tr></thead><tbody>
-    ${holders.map((h, i) => {
-      const addr = h.address?.hash || '';
-      const bal = Number(h.value || 0) / 1e18;
-      const pct = (bal / VR_TOTAL_SUPPLY * 100);
-      return `<tr>
-        <td>${i + 1}</td>
-        <td>${addrHTML(addr)}</td>
-        <td class="mono">${fmtNum(bal)}</td>
+  // NTT Executor uses same locks data method
+  const nttEl=document.getElementById('nttExecList');
+  const nttTxs=D.locks.filter(tx=>(tx.from?.hash||'').toLowerCase()===NTT_EXEC.toLowerCase());
+  if(nttTxs.length){
+    nttEl.innerHTML=`<table><thead><tr><th>Time</th><th>Amount</th><th>To</th><th>Tx</th></tr></thead><tbody>
+    ${nttTxs.map(tx=>{
+      const vol=pVR(tx);const h=tx.transaction_hash||'';
+      const ts=tx.timestamp?new Date(tx.timestamp).toISOString().slice(0,16).replace('T',' '):'—';
+      return`<tr>
+        <td style="font-size:10px;white-space:nowrap">${ts}</td>
+        <td class="mono" style="font-weight:700;color:#f0b90b">${fN(vol)} VR</td>
+        <td>${addrH(tx.to)}</td>
+        <td><a href="${ES}/tx/${h}" target="_blank" class="addr-link">${sA(h)}</a></td>
+      </tr>`;
+    }).join('')}</tbody></table>`;
+  }else{nttEl.innerHTML='<div class="msg-box">No NTT Executor transactions in loaded bridge data</div>';}
+}
+
+function renderWhales(){
+  const p=D.price;
+  // Wallet watch
+  const wEl=document.getElementById('walletWatch');
+  if(D.wallets.length){
+    wEl.innerHTML=D.wallets.map(w=>{
+      const bal=Number(BigInt(w.balance||'0'))/1e18;
+      return`<div class="wallet-row">
+        <span class="wallet-name"><span class="lbl ${w.cls}">${w.name}</span></span>
+        <a class="addr-link" href="${ES}/address/${w.addr}" target="_blank">${sA(w.addr)}</a>
+        <span class="copy-btn" onclick="cpy('${w.addr}',event)">📋</span>
+        <span class="wallet-bal">${fN(bal)} VR</span>
+        <span style="color:var(--muted);font-size:10px;min-width:70px;text-align:right">${p?'$'+fN(bal*p,0):''}</span>
+        <a href="${ES}/address/${w.addr}" target="_blank" style="font-size:10px">↗</a>
+      </div>`;
+    }).join('');
+  }
+  // Holders
+  const hEl=document.getElementById('holdersTable');
+  if(D.holders.length){
+    hEl.innerHTML=`<table><thead><tr><th>#</th><th>Address</th><th>Balance</th><th>% Supply</th><th>USD</th></tr></thead><tbody>
+    ${D.holders.map((h,i)=>{
+      const bal=Number(BigInt(h.value||'0'))/1e18,pct=bal/SUPPLY*100;
+      return`<tr><td>${i+1}</td><td>${addrH(h.address)}</td>
+        <td class="mono" style="font-weight:700">${fN(bal)}</td>
         <td>${pct.toFixed(2)}%</td>
-        <td>${state.price ? '$'+fmtNum(bal*state.price,0) : '—'}</td>
-        <td><a href="${etherscanAddr(addr)}" target="_blank" style="font-size:10px">↗</a></td>
-      </tr>`;
-    }).join('')}
-    </tbody></table>`;
-  } else {
-    htEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">Failed to load holder data</div>';
-  }
-
+        <td>${p?'$'+fN(bal*p,0):'—'}</td></tr>`;
+    }).join('')}</tbody></table>`;
+  }else{hEl.innerHTML='<div class="msg-box">Holder data unavailable</div>';}
   // Large transfers
-  const lt = state.largeTransfers;
-  const ltEl = document.getElementById('largeTransfers');
-  if (lt.length) {
-    ltEl.innerHTML = `<table><thead><tr><th>Time</th><th>From</th><th>To</th><th>Amount</th><th>USD</th><th>Tx</th></tr></thead><tbody>
-    ${lt.map(tx => {
-      const vol = parseVR(tx);
-      const from = tx.from?.hash || '';
-      const to = tx.to?.hash || '';
-      const hash = tx.transaction_hash || tx.tx_hash || '';
-      const ts = tx.timestamp || tx.block_timestamp || '';
-      const d = new Date(ts);
-      const time = d.toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
-      // Categorize direction
-      let direction = '';
-      const toLow = to.toLowerCase();
-      if (toLow === MEXC_WALLET.toLowerCase()) direction = '<span class="lbl" style="background:rgba(239,68,68,.1);color:var(--red)">→ EXCHANGE</span>';
-      else if (toLow === NTT_MANAGER.toLowerCase()) direction = '<span class="lbl" style="background:rgba(245,158,11,.1);color:#f0b90b">→ BRIDGE</span>';
-
-      return `<tr>
-        <td style="font-size:10px;white-space:nowrap">${time}</td>
-        <td>${addrHTML(from)}</td>
-        <td>${addrHTML(to)} ${direction}</td>
-        <td class="mono" style="font-weight:700">${fmtNum(vol)} VR</td>
-        <td>${state.price ? '$'+fmtNum(vol*state.price,0) : '—'}</td>
-        <td><a href="${etherscanTx(hash)}" target="_blank" class="addr-link">${shortAddr(hash)}</a></td>
-      </tr>`;
-    }).join('')}
-    </tbody></table>`;
-  } else {
-    ltEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">No large transfers (&gt;50M VR) in recent data</div>';
-  }
-}
-
-function renderNFT() {
-  const s = state.nftStats;
-  if (s) {
-    document.getElementById('nftFloor').textContent = s.floor != null ? s.floor.toFixed(4) + ' ETH' : '—';
-    document.getElementById('nftFloorUsd').textContent = s.floorUsd ? `$${s.floorUsd.toFixed(2)}` : (s.floor && state.price ? '' : (s.note || ''));
-    document.getElementById('nftVol').textContent = s.volume24h != null ? s.volume24h.toFixed(2) + ' ETH' : '—';
-    document.getElementById('nftListings').textContent = s.listings != null ? fmtNum(s.listings) : '—';
-    document.getElementById('nftHolders').textContent = s.holders != null ? fmtNum(s.holders) : '—';
-  }
-
-  // NFT Sales
-  const sales = state.nftSales;
-  const salesEl = document.getElementById('nftSales');
-  if (sales.length) {
-    salesEl.innerHTML = `<table><thead><tr><th>Time</th><th>Land ID</th><th>Price (ETH)</th><th>USD</th><th>Seller</th><th>Buyer</th><th></th></tr></thead><tbody>
-    ${sales.map(sl => {
-      const ts = sl.time ? new Date(sl.time).toISOString().slice(0, 16).replace('T', ' ') : '—';
-      const belowFloor = s?.floor && sl.price && sl.price < s.floor * 0.6;
-      const rowStyle = belowFloor ? 'background:rgba(239,68,68,.06)' : '';
-      return `<tr style="${rowStyle}">
+  const lt=D.transfers.slice().sort((a,b)=>pVR(b)-pVR(a)).slice(0,20);
+  const ltEl=document.getElementById('lgTransfers');
+  if(lt.length){
+    ltEl.innerHTML=`<table><thead><tr><th>Time</th><th>From</th><th>To</th><th>Amount</th><th>USD</th><th>Tx</th></tr></thead><tbody>
+    ${lt.map(tx=>{
+      const vol=pVR(tx),hash=tx.transaction_hash||'';
+      const ts=tx.timestamp?new Date(tx.timestamp).toISOString().slice(0,16).replace('T',' ')+'Z':'—';
+      const toLow=(tx.to?.hash||'').toLowerCase();
+      const dir=toLow===MEXC.toLowerCase()?'<span class="lbl" style="background:rgba(239,68,68,.08);color:var(--red)">→ MEXC</span>':
+        toLow===NTT_MGR.toLowerCase()?'<span class="lbl" style="background:rgba(245,158,11,.08);color:#f0b90b">→ BRIDGE</span>':
+        toLow===UNI_POOL.toLowerCase()?'<span class="lbl" style="background:rgba(59,130,246,.08);color:var(--accent)">→ DEX</span>':'';
+      return`<tr>
         <td style="font-size:10px;white-space:nowrap">${ts}</td>
-        <td>#${sl.tokenId}</td>
-        <td class="mono" style="font-weight:700">${sl.price != null ? sl.price.toFixed(4) : '—'}</td>
-        <td>${sl.price && state.price ? '$'+fmtNum(sl.price * (/*eth price approx*/2500), 0) : '—'}</td>
-        <td>${sl.seller ? addrHTML(sl.seller) : '—'}</td>
-        <td>${sl.buyer ? addrHTML(sl.buyer) : '—'}</td>
-        <td>${belowFloor ? '<span class="lbl" style="background:rgba(239,68,68,.15);color:var(--red)">🔴 BELOW FLOOR</span>' : ''}</td>
+        <td>${addrH(tx.from)}</td>
+        <td>${addrH(tx.to)} ${dir}</td>
+        <td class="mono" style="font-weight:700">${fN(vol)} VR</td>
+        <td>${p?'$'+fN(vol*p,0):'—'}</td>
+        <td><a href="${ES}/tx/${hash}" target="_blank" class="addr-link">${sA(hash)}</a></td>
       </tr>`;
-    }).join('')}
-    </tbody></table>`;
-  } else {
-    salesEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">NFT sales data unavailable. OpenSea API may require authentication for this collection.</div>';
-  }
+    }).join('')}</tbody></table>`;
+  }else{ltEl.innerHTML='<div class="msg-box">No transfer data available</div>';}
+}
 
-  // Deployer activity
-  const dtxs = state.deployerTxs;
-  const dEl = document.getElementById('deployerActivity');
-  if (dtxs.length) {
-    dEl.innerHTML = `<table><thead><tr><th>Time</th><th>Type</th><th>To</th><th>Method</th><th>Tx</th></tr></thead><tbody>
-    ${dtxs.map(tx => {
-      const hash = tx.hash || '';
-      const ts = tx.timestamp ? new Date(tx.timestamp).toISOString().slice(0, 16).replace('T', ' ') : '—';
-      const to = tx.to?.hash || '';
-      const method = tx.method || tx.decoded_input?.method_id || '—';
-      const isCreate = tx.type === 'contract_creation' || !to;
-      return `<tr${isCreate ? ' style="background:rgba(239,68,68,.05)"' : ''}>
+function renderNFT(){
+  const dEl=document.getElementById('deployerTxs');
+  if(D.deployerTxs.length){
+    dEl.innerHTML=`<table><thead><tr><th>Time</th><th>Type</th><th>To</th><th>Method</th><th>Tx</th></tr></thead><tbody>
+    ${D.deployerTxs.map(tx=>{
+      const h=tx.hash||'',ts=tx.timestamp?new Date(tx.timestamp).toISOString().slice(0,16).replace('T',' '):'—';
+      const isCreate=!tx.to||tx.tx_types?.includes('contract_creation');
+      const method=tx.method||'—';
+      return`<tr${isCreate?' style="background:rgba(239,68,68,.04)"':''}>
         <td style="font-size:10px;white-space:nowrap">${ts}</td>
-        <td>${isCreate ? '<span class="lbl" style="background:rgba(239,68,68,.15);color:var(--red)">CONTRACT CREATE</span>' : '<span class="lbl lbl-unknown">TX</span>'}</td>
-        <td>${addrHTML(to)}</td>
-        <td class="mono" style="font-size:10px">${typeof method === 'string' ? method.slice(0, 20) : '—'}</td>
-        <td><a href="${etherscanTx(hash)}" target="_blank" class="addr-link">${shortAddr(hash)}</a></td>
+        <td>${isCreate?'<span class="lbl" style="background:rgba(239,68,68,.12);color:var(--red)">CREATE</span>':'<span class="lbl lbl-unknown">TX</span>'}</td>
+        <td>${tx.to?addrH(tx.to):'—'}</td>
+        <td class="mono">${typeof method==='string'?method.slice(0,20):'—'}</td>
+        <td><a href="${ES}/tx/${h}" target="_blank" class="addr-link">${sA(h)}</a></td>
       </tr>`;
-    }).join('')}
-    </tbody></table>`;
-  } else {
-    dEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">No deployer transactions found</div>';
-  }
+    }).join('')}</tbody></table>`;
+  }else{dEl.innerHTML='<div class="msg-box">No deployer transactions found</div>';}
 }
 
-function renderAnomalies() {
-  const log = engine.alerts;
-  const el = document.getElementById('anomalyLog');
-  const countEl = document.getElementById('alertCount');
-
-  const redCount = log.filter(a => a.severity === 'red').length;
-  if (redCount > 0) {
-    countEl.textContent = redCount;
-    countEl.style.display = 'inline-block';
-  } else if (log.length > 0) {
-    countEl.textContent = log.length;
-    countEl.style.display = 'inline-block';
-    countEl.style.background = 'rgba(245,158,11,.2)';
-    countEl.style.color = 'var(--yellow)';
-  } else {
-    countEl.style.display = 'none';
-  }
-
-  // Top alert banner
-  const banner = document.getElementById('alertBanner');
-  const topRed = log.find(a => a.severity === 'red');
-  if (topRed) {
-    banner.className = 'alert-banner red';
-    banner.innerHTML = `🔴 <strong>${topRed.title}:</strong> ${topRed.description}`;
-    banner.style.display = 'flex';
-  } else {
-    const topYellow = log.find(a => a.severity === 'yellow');
-    if (topYellow) {
-      banner.className = 'alert-banner yellow';
-      banner.innerHTML = `🟡 <strong>${topYellow.title}:</strong> ${topYellow.description}`;
-      banner.style.display = 'flex';
-    } else {
-      banner.style.display = 'none';
-    }
-  }
-
-  if (!log.length) {
-    el.innerHTML = '<div style="padding:30px;text-align:center;color:var(--muted)">No anomalies detected. All systems nominal.</div>';
-    return;
-  }
-
-  el.innerHTML = log.slice().reverse().map(a => {
-    const icon = a.severity === 'red' ? '🔴' : a.severity === 'yellow' ? '🟡' : '🟢';
-    const modBadge = `<span class="lbl lbl-unknown">${a.module.toUpperCase()}</span>`;
-    return `<div class="anomaly-item" data-severity="${a.severity}" data-module="${a.module}">
-      <div class="anomaly-icon">${icon}</div>
-      <div class="anomaly-body">
-        <div class="anomaly-title">${a.title} ${modBadge}</div>
-        <div class="anomaly-desc">${a.description}</div>
-        <div class="anomaly-meta">${new Date(a.timestamp).toLocaleString('cs-CZ')}${a.url ? ` · <a class="anomaly-link" href="${a.url}" target="_blank">View tx ↗</a>` : ''}</div>
-      </div>
-    </div>`;
-  }).join('');
+function renderAnomalies(){
+  const log=engine.alerts;
+  const cEl=document.getElementById('alertCount');
+  const reds=log.filter(a=>a.severity==='red').length;
+  if(log.length){
+    cEl.textContent=reds||log.length;cEl.style.display='inline-block';
+    cEl.style.background=reds?'rgba(239,68,68,.2)':'rgba(245,158,11,.15)';
+    cEl.style.color=reds?'var(--red)':'var(--yellow)';
+  }else{cEl.style.display='none';}
+  const banner=document.getElementById('alertBanner');
+  const top=log.find(a=>a.severity==='red')||log.find(a=>a.severity==='yellow');
+  if(top){
+    banner.className=`alert-banner sev-${top.severity}`;
+    banner.innerHTML=`${top.severity==='red'?'🔴':'🟡'} <strong>${top.title}:</strong> ${top.description}`;
+  }else{banner.className='alert-banner';}
+  const el=document.getElementById('anomalyLog');
+  if(!log.length){el.innerHTML='<div class="msg-box">No anomalies detected. ✓</div>';return;}
+  el.innerHTML=log.slice().reverse().map(a=>`<div class="anomaly-item" data-severity="${a.severity}" data-module="${a.module}">
+    <div class="anomaly-icon">${a.severity==='red'?'🔴':a.severity==='yellow'?'🟡':'🟢'}</div>
+    <div class="anomaly-body">
+      <div class="anomaly-title">${a.title} <span class="lbl lbl-unknown">${a.module.toUpperCase()}</span></div>
+      <div class="anomaly-desc">${a.description}</div>
+      <div class="anomaly-meta">${new Date(a.timestamp).toLocaleString('cs-CZ')}${a.url?` · <a href="${a.url}" target="_blank" style="font-size:9px">↗ tx</a>`:''}</div>
+    </div>
+  </div>`).join('');
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   MAIN REFRESH ORCHESTRATOR
-   ═══════════════════════════════════════════════════════════════ */
-async function refreshAll() {
-  const btn = document.getElementById('btnRefresh');
-  btn.disabled = true;
-  btn.textContent = '⟳ Loading…';
-  document.getElementById('statusLabel').textContent = 'Fetching…';
-
-  try {
-    // Phase 1: Price + Bridge (most critical)
-    await Promise.allSettled([
-      fetchPrice(),
-      fetchBridgeLocks(),
-      fetchNttBalance(),
-      fetchSparkline(),
-    ]);
-
-    // Phase 2: Whales + NFT
-    const [walletData] = await Promise.allSettled([
-      fetchWalletBalances(),
-      fetchHolders(),
-      fetchLargeTransfers(),
-      fetchNFTStats(),
-      fetchNFTSales(),
-      fetchDeployerActivity(),
-    ]);
-
-    // Run anomaly engine
+/* ─── Main refresh ──────────────────────────────────────────── */
+async function refreshAll(){
+  const btn=document.getElementById('btnRefresh');
+  btn.disabled=true;btn.textContent='⟳ Loading…';
+  document.getElementById('statusLabel').textContent='Fetching…';
+  document.getElementById('staleNotice').style.display='none';
+  try{
+    await loadData();
     engine.reset();
-    engine.analyzeBridge(state.bridgeLocks, state.bridgeUnlocks, state.price);
-    engine.analyzeWhales(state.holders, state.largeTransfers, state.price);
-    if (state.nftStats) engine.analyzeNFT(state.nftSales, state.nftStats.floor);
-
-    // Render all tabs
-    renderOverview();
-    renderBridge();
-    renderWhales(walletData.status === 'fulfilled' ? walletData.value : []);
-    renderNFT();
-    renderAnomalies();
-
-    setStatus(true);
-  } catch (e) {
-    console.error('[Refresh]', e);
-    setStatus(false);
-  }
-
-  btn.disabled = false;
-  btn.textContent = '⟳ Refresh';
-  document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString('cs-CZ') + ' UTC';
+    engine.analyzeBridge(D.locks,D.unlocks,D.price);
+    engine.analyzeWhales(D.holders,D.transfers,D.price);
+    engine.analyzeWormhole(D.wormholeTxs);
+    renderOverview();renderBridge();renderWormhole();renderWhales();renderNFT();renderAnomalies();
+    const stale=D.lastFetchAt&&(Date.now()-new Date(D.lastFetchAt).getTime())>20*60000;
+    setStatus(true,stale);
+  }catch(e){console.error(e);setStatus(false);}
+  btn.disabled=false;btn.textContent='⟳ Refresh';
+  document.getElementById('lastUpdated').textContent=new Date().toLocaleTimeString('cs-CZ');
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   TAB NAVIGATION
-   ═══════════════════════════════════════════════════════════════ */
-function initTabs() {
-  const tabs = document.querySelectorAll('.tab[data-tab]');
-  const contents = document.querySelectorAll('.tab-content');
-
-  function activate(id) {
-    tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === id));
-    contents.forEach(c => c.classList.toggle('active', c.id === 'tab-' + id));
-    window.location.hash = id;
+/* ─── Tabs + Filters + Export ───────────────────────────────── */
+function initTabs(){
+  const tabs=document.querySelectorAll('.tab[data-tab]');
+  const panes=document.querySelectorAll('.tab-content');
+  function act(id){
+    tabs.forEach(t=>t.classList.toggle('active',t.dataset.tab===id));
+    panes.forEach(p=>p.classList.toggle('active',p.id==='tab-'+id));
+    history.replaceState(null,'','#'+id);
   }
-
-  tabs.forEach(t => t.addEventListener('click', () => activate(t.dataset.tab)));
-
-  // Restore from hash
-  const hash = window.location.hash.slice(1);
-  if (hash && document.getElementById('tab-' + hash)) {
-    activate(hash);
-  }
+  tabs.forEach(t=>t.addEventListener('click',()=>act(t.dataset.tab)));
+  const h=location.hash.slice(1);if(h&&document.getElementById('tab-'+h))act(h);
 }
-
-/* ═══════════════════════════════════════════════════════════════
-   ANOMALY FILTER
-   ═══════════════════════════════════════════════════════════════ */
-function initFilters() {
-  document.querySelectorAll('.filter-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      const f = btn.dataset.filter;
-      document.querySelectorAll('.anomaly-item').forEach(item => {
-        if (f === 'all') { item.style.display = ''; return; }
-        const sev = item.dataset.severity;
-        const mod = item.dataset.module;
-        item.style.display = (sev === f || mod === f) ? '' : 'none';
-      });
+document.querySelectorAll('.filter-btn').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('.filter-btn').forEach(x=>x.classList.remove('active'));b.classList.add('active');
+    const f=b.dataset.filter;
+    document.querySelectorAll('.anomaly-item').forEach(i=>{
+      i.style.display=(f==='all'||i.dataset.severity===f||i.dataset.module===f)?'':'none';
     });
   });
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   EXPORT
-   ═══════════════════════════════════════════════════════════════ */
-function exportAlerts() {
-  const json = JSON.stringify(engine.alerts, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `vr-anomaly-log-${new Date().toISOString().slice(0,10)}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   AUTO-REFRESH
-   ═══════════════════════════════════════════════════════════════ */
-document.getElementById('autoRefresh').addEventListener('change', function() {
-  if (this.checked) {
-    autoTimer = setInterval(refreshAll, 5 * 60 * 1000);
-  } else {
-    clearInterval(autoTimer);
-    autoTimer = null;
-  }
 });
-
-/* ═══════════════════════════════════════════════════════════════
-   INIT
-   ═══════════════════════════════════════════════════════════════ */
-window.addEventListener('resize', () => { if (state.sparkData.length) drawSparkline(); });
+function exportAlerts(){
+  const blob=new Blob([JSON.stringify(engine.alerts,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=`vr-anomaly-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();URL.revokeObjectURL(url);
+}
+document.getElementById('autoRefresh').addEventListener('change',function(){
+  if(this.checked)autoTmr=setInterval(refreshAll,300000);
+  else{clearInterval(autoTmr);autoTmr=null;}
+});
+window.addEventListener('resize',()=>{if(D.spark.length)drawSparkline();});
 initTabs();
-initFilters();
 refreshAll();
 </script>
 </body>
