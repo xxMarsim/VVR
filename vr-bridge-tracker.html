@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>$VR Bridge Tracker — Live</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #07090f;
+    color: #dde6f5;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    padding: 20px 16px 40px;
+  }
+
+  /* ── Header ── */
+  .header {
+    max-width: 1200px;
+    margin: 0 auto 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .title-block h1 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #7eb8f7;
+    letter-spacing: 0.05em;
+  }
+  .title-block p {
+    font-size: 11px;
+    color: #445;
+    margin-top: 3px;
+  }
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .btn-refresh {
+    background: #132238;
+    color: #7eb8f7;
+    border: 1px solid #2a4a6a;
+    border-radius: 8px;
+    padding: 8px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.03em;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .btn-refresh:hover { background: #1a3a5a; border-color: #4a7aaa; }
+  .btn-refresh:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  .status-pill {
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+  .pill-loading { background: #1a2a1a; color: #88cc88; }
+  .pill-ok      { background: #0e2010; color: #4dbb77; }
+  .pill-error   { background: #2a0e0e; color: #e05555; }
+  .pill-idle    { background: #1a1a2a; color: #556; }
+
+  #last-updated {
+    font-size: 10px;
+    color: #445;
+    min-width: 160px;
+    text-align: right;
+  }
+
+  /* ── Summary cards ── */
+  .summary-row {
+    max-width: 1200px;
+    margin: 0 auto 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+  }
+  .s-card {
+    background: #0d1320;
+    border: 1px solid #1a2a40;
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .s-label { font-size: 10px; color: #445; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 5px; }
+  .s-val   { font-size: 16px; font-weight: 700; }
+  .s-sub   { font-size: 10px; color: #445; margin-top: 3px; }
+  .c-out { color: #f0b90b; }
+  .c-in  { color: #4dbb77; }
+  .c-tot { color: #7eb8f7; }
+  .c-cnt { color: #bb77ee; }
+
+  /* ── Main grid ── */
+  .main-grid {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  @media (max-width: 760px) {
+    .main-grid { grid-template-columns: 1fr; }
+  }
+
+  .panel {
+    background: #0b1018;
+    border-radius: 12px;
+    border: 1px solid #1a2535;
+    overflow: hidden;
+  }
+  .panel-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #1a2535;
+  }
+  .panel-dot {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .dot-out { background: #f0b90b; box-shadow: 0 0 7px #f0b90b88; }
+  .dot-in  { background: #4dbb77; box-shadow: 0 0 7px #4dbb7788; }
+  .panel-title {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    flex: 1;
+  }
+  .panel-count {
+    font-size: 11px;
+    color: #556;
+    font-weight: 600;
+  }
+
+  /* ── Tx list ── */
+  .tx-list { max-height: 560px; overflow-y: auto; }
+  .tx-list::-webkit-scrollbar { width: 5px; }
+  .tx-list::-webkit-scrollbar-track { background: #07090f; }
+  .tx-list::-webkit-scrollbar-thumb { background: #2a3a50; border-radius: 3px; }
+
+  .tx-row {
+    padding: 10px 16px;
+    border-bottom: 1px solid #0f1620;
+    display: grid;
+    grid-template-columns: 90px 1fr auto;
+    gap: 8px;
+    align-items: start;
+    transition: background 0.12s;
+  }
+  .tx-row:hover { background: #0e1825; }
+  .tx-row:last-child { border-bottom: none; }
+
+  .tx-time {
+    font-size: 10px;
+    color: #4a6080;
+    font-family: monospace;
+    line-height: 1.5;
+    padding-top: 1px;
+  }
+  .tx-time .tx-date { color: #334; font-size: 9px; }
+
+  .tx-mid { min-width: 0; }
+  .tx-amount {
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 3px;
+    white-space: nowrap;
+  }
+  .tx-amount.out { color: #f0b90b; }
+  .tx-amount.in  { color: #4dbb77; }
+
+  .tx-addr-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10px;
+    color: #445;
+    margin-bottom: 2px;
+    flex-wrap: wrap;
+  }
+  .addr-label {
+    font-size: 9px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+  }
+  .lbl-ntt      { background: #1a0f2a; color: #9977cc; }
+  .lbl-nexec    { background: #1a1528; color: #bb99ee; }
+  .lbl-account  { background: #1a2210; color: #88cc66; }
+  .lbl-mexc     { background: #1a2a1a; color: #4dbb77; }
+  .lbl-deployer { background: #2a1a0a; color: #cc8844; }
+  .lbl-unknown  { background: #1a1a1a; color: #556; }
+  .lbl-bsc      { background: #1a1500; color: #f0b90b; }
+
+  .addr-link {
+    color: #4a6888;
+    text-decoration: none;
+    font-family: monospace;
+    font-size: 10px;
+    transition: color 0.12s;
+  }
+  .addr-link:hover { color: #88bbee; text-decoration: underline; }
+
+  .tx-hash-link {
+    display: block;
+    margin-top: 3px;
+    font-size: 9px;
+    color: #334;
+    font-family: monospace;
+    text-decoration: none;
+    transition: color 0.12s;
+  }
+  .tx-hash-link:hover { color: #5588bb; }
+
+  .tx-right {
+    text-align: right;
+    font-size: 10px;
+    color: #334;
+    padding-top: 2px;
+    white-space: nowrap;
+  }
+  .tx-usd {
+    font-size: 11px;
+    font-weight: 600;
+    color: #4a6070;
+  }
+  .tx-block {
+    font-size: 9px;
+    color: #2a3a4a;
+    margin-top: 3px;
+    font-family: monospace;
+  }
+
+  /* ── Empty / loader ── */
+  .state-msg {
+    padding: 40px 20px;
+    text-align: center;
+    font-size: 12px;
+    color: #334;
+  }
+  .spinner {
+    display: inline-block;
+    width: 18px; height: 18px;
+    border: 2px solid #1a2535;
+    border-top-color: #7eb8f7;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-bottom: 10px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Method badge ── */
+  .method-badge {
+    font-size: 9px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    margin-left: 4px;
+  }
+  .m-lock    { background: #1a1a0a; color: #ccaa22; }
+  .m-receive { background: #0a1a0a; color: #44aa66; }
+
+  /* ── Notice bar ── */
+  .notice {
+    max-width: 1200px;
+    margin: 0 auto 14px;
+    padding: 9px 14px;
+    background: #0d1420;
+    border: 1px solid #1a2840;
+    border-radius: 8px;
+    font-size: 11px;
+    color: #445;
+    line-height: 1.5;
+  }
+  .notice strong { color: #7eb8f7; }
+
+  /* ── Error notice ── */
+  .error-notice {
+    max-width: 1200px;
+    margin: 0 auto 14px;
+    padding: 10px 14px;
+    background: #1a0a0a;
+    border: 1px solid #3a1515;
+    border-radius: 8px;
+    font-size: 11px;
+    color: #cc5555;
+    display: none;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="title-block">
+    <h1>$VR Bridge Tracker — Live On-Chain</h1>
+    <p>Wormhole NTT · ETH ↔ BSC · Blockscout API · Viktor Praze / On-Chain Desk</p>
+  </div>
+  <div class="controls">
+    <span id="status-pill" class="status-pill pill-idle">Čeká</span>
+    <button class="btn-refresh" id="btn-refresh" onclick="loadData()">⟳ Načíst transakce</button>
+  </div>
+</div>
+
+<div id="last-updated"></div>
+
+<div class="notice">
+  <strong>Co sledujeme:</strong>
+  NTT Manager (ETH) <code style="color:#7eb8f7">0xC721f339…26eA15</code> — přijatý VR = zamčení = přechod ETH→BSC.
+  Odeslaný VR (<code>receiveMessage</code>) = odemčení = návrat BSC→ETH.
+  Data: Blockscout Ethereum + BscScan (veřejná API, bez klíče). Posledních 50 transakcí v každém směru.
+  <strong>BSC párovanie:</strong> Ke každému ETH→BSC zamčení hledáme odpovídající mint na BSC (shoda částky + čas do 1h).
+</div>
+
+<div id="error-notice" class="error-notice"></div>
+
+<div class="summary-row">
+  <div class="s-card">
+    <div class="s-label">Objem ETH→BSC (dnes)</div>
+    <div class="s-val c-out" id="sum-out">—</div>
+    <div class="s-sub" id="sum-out-usd">načítám…</div>
+  </div>
+  <div class="s-card">
+    <div class="s-label">Objem BSC→ETH (dnes)</div>
+    <div class="s-val c-in" id="sum-in">—</div>
+    <div class="s-sub" id="sum-in-usd">načítám…</div>
+  </div>
+  <div class="s-card">
+    <div class="s-label">Celkový objem (dnes)</div>
+    <div class="s-val c-tot" id="sum-total">—</div>
+    <div class="s-sub" id="sum-total-usd">načítám…</div>
+  </div>
+  <div class="s-card">
+    <div class="s-label">Počet dávek (dnes)</div>
+    <div class="s-val c-cnt" id="sum-count">—</div>
+    <div class="s-sub" id="sum-price">cena VR: načítám…</div>
+  </div>
+</div>
+
+<div class="main-grid">
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-dot dot-out"></span>
+      <span class="panel-title" style="color:#f0b90b;">ETH → BSC &nbsp;(Zamčení)</span>
+      <span class="panel-count" id="count-out">0 tx</span>
+    </div>
+    <div class="tx-list" id="list-out">
+      <div class="state-msg">Klikněte na „Načíst transakce"</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-dot dot-in"></span>
+      <span class="panel-title" style="color:#4dbb77;">BSC → ETH &nbsp;(Odemčení)</span>
+      <span class="panel-count" id="count-in">0 tx</span>
+    </div>
+    <div class="tx-list" id="list-in">
+      <div class="state-msg">Klikněte na „Načíst transakce"</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Constants ────────────────────────────────────────
+const NTT_MANAGER    = '0xC721f339fEC6aFe1C9adFc11E2ad2545aE26eA15';
+const VR_TOKEN       = '0x7d5121505149065b562C789A0145eD750e6E8cdD';
+const BSC_VR_TOKEN   = '0x02C01ed6f17D8d2f13233d0b5447cdE7313209dE';
+const ETHERSCAN_TX   = 'https://etherscan.io/tx/';
+const ETHERSCAN_ADR  = 'https://etherscan.io/address/';
+const BSCSCAN_TX     = 'https://bscscan.com/tx/';
+const BSCSCAN_ADR    = 'https://bscscan.com/address/';
+const BLOCKSCOUT     = 'https://eth.blockscout.com';
+
+// VR price fallback (updated manually if API fails)
+let vrPrice = 0.00145825;
+
+// Known address labels
+const LABELS = {
+  '0xd2d9c936165a85f27a5a7e07afb974d022b89463': { text: 'NttManagerWithExecutor', cls: 'lbl-nexec' },
+  '0x49719d256a5ea16bfa579ea16e95bea9fa41a452': { text: 'EIP-7702 Smart Acc.', cls: 'lbl-account' },
+  '0x9642b23ed1e01df1092b92641051881a322f5d4e': { text: 'MEXC Hot Wallet', cls: 'lbl-mexc' },
+  '0xae0197e27b6f6dbbcf6cdecd5ab5f1d56fe51859': { text: 'VR Deployer', cls: 'lbl-deployer' },
+  '0xc721f339fec6afe1c9adfc11e2ad2545ae26ea15': { text: 'NTT Manager (ETH)', cls: 'lbl-ntt' },
+  '0xf5c299316699131d29adcb7ef87af8e97bbc7ead': { text: 'Neznámý odesílatel', cls: 'lbl-unknown' },
+};
+
+function getLabel(addr) {
+  return LABELS[addr.toLowerCase()] || { text: '', cls: 'lbl-unknown' };
+}
+
+// ── Formatting helpers ───────────────────────────────
+function fmtVR(rawValue, decimals) {
+  const dec = parseInt(decimals) || 18;
+  const val = Number(BigInt(rawValue)) / Math.pow(10, dec);
+  if (val >= 1e9) return (val / 1e9).toFixed(2) + ' B';
+  if (val >= 1e6) return (val / 1e6).toFixed(2) + ' M';
+  if (val >= 1e3) return (val / 1e3).toFixed(0) + ' K';
+  return val.toFixed(2);
+}
+
+function rawToVR(rawValue, decimals) {
+  const dec = parseInt(decimals) || 18;
+  return Number(BigInt(rawValue)) / Math.pow(10, dec);
+}
+
+function fmtUSD(vrAmount) {
+  const usd = vrAmount * vrPrice;
+  if (usd >= 1e6) return '$' + (usd / 1e6).toFixed(2) + 'M';
+  if (usd >= 1e3) return '$' + (usd / 1e3).toFixed(1) + 'K';
+  return '$' + usd.toFixed(2);
+}
+
+function fmtTime(ts) {
+  const d = new Date(ts);
+  const pad = n => String(n).padStart(2, '0');
+  const date = `${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}`;
+  const time = `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
+  return { date, time };
+}
+
+function shortAddr(addr) {
+  return addr.slice(0, 6) + '…' + addr.slice(-4);
+}
+
+function shortHash(hash) {
+  return hash.slice(0, 8) + '…' + hash.slice(-6);
+}
+
+function isToday(ts) {
+  const d = new Date(ts);
+  const now = new Date();
+  return d.getUTCFullYear() === now.getUTCFullYear() &&
+         d.getUTCMonth()    === now.getUTCMonth() &&
+         d.getUTCDate()     === now.getUTCDate();
+}
+
+// ── Fetch BSC VR mints from BscScan ─────────────────
+async function fetchBscMints() {
+  const url = 'https://api.bscscan.com/api' +
+    '?module=account&action=tokentx' +
+    `&contractaddress=${BSC_VR_TOKEN}` +
+    '&address=0x0000000000000000000000000000000000000000' +
+    '&page=1&offset=50&sort=desc';
+  const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+  if (!res.ok) throw new Error(`BscScan HTTP ${res.status}`);
+  const json = await res.json();
+  if (!Array.isArray(json.result)) return [];
+  return json.result.filter(tx =>
+    tx.from.toLowerCase() === '0x0000000000000000000000000000000000000000'
+  );
+}
+
+// ── Pair ETH locks with BSC mints by amount+timestamp ─
+function pairWithBsc(outTxs, bscMints) {
+  const usedHashes = new Set();
+  return outTxs.map(ethTx => {
+    const ethAmt  = rawToVR(ethTx.total?.value || '0', ethTx.total?.decimals || '18');
+    const ethTime = new Date(ethTx.timestamp).getTime();
+    let best = null, bestDelta = Infinity;
+    for (const bscTx of bscMints) {
+      if (usedHashes.has(bscTx.hash)) continue;
+      const dec     = parseInt(bscTx.tokenDecimal) || 18;
+      const bscAmt  = Number(BigInt(bscTx.value)) / Math.pow(10, dec);
+      const bscTime = parseInt(bscTx.timeStamp) * 1000;
+      const ratio   = Math.abs(bscAmt - ethAmt) / (ethAmt || 1);
+      const delta   = bscTime - ethTime;
+      if (ratio < 0.001 && delta >= 0 && delta < 3_600_000 && delta < bestDelta) {
+        best = bscTx; bestDelta = delta;
+      }
+    }
+    if (best) usedHashes.add(best.hash);
+    return { ethTx, bscTx: best };
+  });
+}
+
+// ── Build BSC paired row section ─────────────────────
+function buildBscPair(ethTx, bscTx) {
+  if (!bscTx) {
+    return `<div class="tx-addr-row"><span style="color:#334;font-size:9px;">BSC doručení: čekám / nenalezeno</span></div>`;
+  }
+  const delayMin = Math.round((parseInt(bscTx.timeStamp) * 1000 - new Date(ethTx.timestamp).getTime()) / 60000);
+  const recipient = bscTx.to || '?';
+  return `
+    <div class="tx-addr-row">
+      <span class="addr-label lbl-bsc">BSC mint</span>
+      <a class="addr-link" href="${BSCSCAN_TX}${bscTx.hash}" target="_blank">${shortHash(bscTx.hash)} ↗</a>
+      <span style="color:#4dbb77;font-size:9px;">+${delayMin}m</span>
+    </div>
+    <div class="tx-addr-row">
+      <span style="color:#334;">příjemce:</span>
+      <a class="addr-link" href="${BSCSCAN_ADR}${recipient}" target="_blank">${shortAddr(recipient)} ↗</a>
+    </div>`;
+}
+
+// ── Build tx row HTML ────────────────────────────────
+function buildRow(tx, direction, bscTx = null) {
+  const { date, time } = fmtTime(tx.timestamp);
+  // BUG FIX: use optional chaining — tx.total can be undefined for some API responses
+  const vrAmt  = rawToVR(tx.total?.value || '0', tx.total?.decimals || '18');
+  const fmtAmt = fmtVR(tx.total?.value || '0', tx.total?.decimals || '18');
+  const usd    = fmtUSD(vrAmt);
+  const hash   = tx.transaction_hash || tx.tx_hash || '';
+
+  // Sender / receiver
+  const sender    = (tx.from && tx.from.hash) ? tx.from.hash : '?';
+  const receiver  = (tx.to   && tx.to.hash)   ? tx.to.hash   : '?';
+  const senderLbl = getLabel(sender);
+  const recvLbl   = getLabel(receiver);
+
+  const senderIsNTT   = sender.toLowerCase()   === NTT_MANAGER.toLowerCase();
+  const receiverIsNTT = receiver.toLowerCase() === NTT_MANAGER.toLowerCase();
+
+  // Method badge
+  const method = tx.method || '';
+  const isReceive = method.toLowerCase().includes('receive') || senderIsNTT;
+  const methodHTML = isReceive
+    ? `<span class="method-badge m-receive">receiveMessage</span>`
+    : `<span class="method-badge m-lock">transfer/lock</span>`;
+
+  const amtClass = direction === 'out' ? 'out' : 'in';
+  const arrow    = direction === 'out' ? '→ BSC' : '← BSC';
+
+  // Display peer (the non-NTT side)
+  const peerAddr  = senderIsNTT ? receiver : sender;
+  const peerLbl   = getLabel(peerAddr);
+  const peerLabel = peerLbl.text
+    ? `<span class="addr-label ${peerLbl.cls}">${peerLbl.text}</span>`
+    : '';
+
+  return `
+    <div class="tx-row">
+      <div class="tx-time">
+        <div>${time} UTC</div>
+        <div class="tx-date">${date}</div>
+      </div>
+      <div class="tx-mid">
+        <div class="tx-amount ${amtClass}">${fmtAmt} VR &nbsp;<span style="font-size:10px;color:#667;font-weight:400;">${arrow}</span>${methodHTML}</div>
+        <div class="tx-addr-row">
+          <span style="color:#334;">od:</span>
+          ${!senderIsNTT ? peerLabel : '<span class="addr-label lbl-ntt">NTT Manager</span>'}
+          <a class="addr-link" href="${ETHERSCAN_ADR}${sender}" target="_blank">${shortAddr(sender)} ↗</a>
+        </div>
+        ${hash ? `<a class="tx-hash-link" href="${ETHERSCAN_TX}${hash}" target="_blank">ETH tx: ${shortHash(hash)} ↗</a>` : ''}
+        ${direction === 'out' ? buildBscPair(tx, bscTx) : ''}
+      </div>
+      <div class="tx-right">
+        <div class="tx-usd">${usd}</div>
+        <div class="tx-block">blok ${tx.block_number || '—'}</div>
+      </div>
+    </div>
+  `;
+}
+
+// ── Fetch from Blockscout ────────────────────────────
+async function fetchTransfers() {
+  // BUG FIX: Blockscout v2 uses token_contract_address_hash, not token=
+  const url = `${BLOCKSCOUT}/api/v2/addresses/${NTT_MANAGER}/token-transfers` +
+              `?token_contract_address_hash=${VR_TOKEN}&limit=50`;
+  const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const json = await res.json();
+  return json.items || [];
+}
+
+// ── Fetch VR price from CoinGecko ───────────────────
+async function fetchPrice() {
+  try {
+    const url = 'https://api.coingecko.com/api/v3/simple/price?ids=victoria-vr&vs_currencies=usd';
+    const res = await fetch(url);
+    if (!res.ok) return;
+    const d = await res.json();
+    if (d['victoria-vr'] && d['victoria-vr'].usd) {
+      vrPrice = d['victoria-vr'].usd;
+    }
+  } catch(e) { /* use fallback */ }
+}
+
+// ── Main loader ──────────────────────────────────────
+async function loadData() {
+  const btn = document.getElementById('btn-refresh');
+  const pill = document.getElementById('status-pill');
+  const errBox = document.getElementById('error-notice');
+
+  btn.disabled = true;
+  errBox.style.display = 'none';
+  pill.className = 'status-pill pill-loading';
+  pill.textContent = 'Načítám…';
+
+  // Loading spinners
+  document.getElementById('list-out').innerHTML = `<div class="state-msg"><div class="spinner"></div><br>Načítám data z Blockscout…</div>`;
+  document.getElementById('list-in').innerHTML  = `<div class="state-msg"><div class="spinner"></div><br>Načítám data z Blockscout…</div>`;
+
+  try {
+    await fetchPrice();
+    document.getElementById('sum-price').textContent = `cena VR: $${vrPrice.toFixed(6)}`;
+
+    const [items, bscMints] = await Promise.all([
+      fetchTransfers(),
+      fetchBscMints().catch(() => []),
+    ]);
+
+    // Split into OUT (to NTT) and IN (from NTT)
+    const outTxs = items.filter(tx =>
+      tx.to && tx.to.hash && tx.to.hash.toLowerCase() === NTT_MANAGER.toLowerCase()
+    );
+    const inTxs = items.filter(tx =>
+      tx.from && tx.from.hash && tx.from.hash.toLowerCase() === NTT_MANAGER.toLowerCase()
+    );
+
+    const pairs = pairWithBsc(outTxs, bscMints);
+
+    // Render
+    renderList('list-out', outTxs, 'out', pairs);
+    renderList('list-in',  inTxs,  'in',  null);
+
+    // Counts
+    document.getElementById('count-out').textContent = `${outTxs.length} tx`;
+    document.getElementById('count-in').textContent  = `${inTxs.length} tx`;
+
+    // Today summaries
+    const todayOut = outTxs.filter(tx => isToday(tx.timestamp));
+    const todayIn  = inTxs.filter(tx  => isToday(tx.timestamp));
+
+    // BUG FIX: optional chaining on total.value / total.decimals
+    const sumOut = todayOut.reduce((s, tx) => s + rawToVR(tx.total?.value || '0', tx.total?.decimals || '18'), 0);
+    const sumIn  = todayIn.reduce((s, tx)  => s + rawToVR(tx.total?.value || '0', tx.total?.decimals || '18'), 0);
+    const sumTot = sumOut + sumIn;
+
+    // BUG FIX: sumOut/sumIn are already human-readable VR floats from rawToVR().
+    // Use fmtVR directly (raw mode) by re-encoding — or better: use inline formatter.
+    function fmtHuman(val) {
+      if (val >= 1e9) return (val / 1e9).toFixed(2) + ' B';
+      if (val >= 1e6) return (val / 1e6).toFixed(2) + ' M';
+      if (val >= 1e3) return (val / 1e3).toFixed(0) + ' K';
+      return val.toFixed(2);
+    }
+    document.getElementById('sum-out').textContent     = fmtHuman(sumOut) + ' VR';
+    document.getElementById('sum-out-usd').textContent = fmtUSD(sumOut) + ` · ${todayOut.length} dávek dnes`;
+    document.getElementById('sum-in').textContent      = fmtHuman(sumIn) + ' VR';
+    document.getElementById('sum-in-usd').textContent  = fmtUSD(sumIn)  + ` · ${todayIn.length} návratů dnes`;
+    document.getElementById('sum-total').textContent   = fmtHuman(sumTot) + ' VR';
+    document.getElementById('sum-total-usd').textContent = fmtUSD(sumTot) + ' celkem dnes';
+    document.getElementById('sum-count').textContent   = `${todayOut.length + todayIn.length} tx`;
+
+    // Status
+    pill.className = 'status-pill pill-ok';
+    pill.textContent = '✓ Aktuální';
+    const now = new Date();
+    document.getElementById('last-updated').textContent =
+      `Poslední update: ${now.toLocaleTimeString('cs-CZ')} · ${now.toLocaleDateString('cs-CZ')}`;
+
+  } catch(err) {
+    pill.className = 'status-pill pill-error';
+    pill.textContent = '✗ Chyba';
+    errBox.style.display = 'block';
+    errBox.textContent = `Chyba při načítání dat: ${err.message}. Zkuste to znovu nebo zkontrolujte připojení.`;
+    document.getElementById('list-out').innerHTML = `<div class="state-msg">Nepodařilo se načíst data.</div>`;
+    document.getElementById('list-in').innerHTML  = `<div class="state-msg">Nepodařilo se načíst data.</div>`;
+    console.error(err);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function renderList(elId, txs, direction, pairs = null) {
+  const el = document.getElementById(elId);
+  if (!txs.length) {
+    el.innerHTML = `<div class="state-msg">Žádné transakce v posledních 50 záznamech.</div>`;
+    return;
+  }
+  if (pairs) {
+    el.innerHTML = pairs.map(({ ethTx, bscTx }) => buildRow(ethTx, direction, bscTx)).join('');
+  } else {
+    el.innerHTML = txs.map(tx => buildRow(tx, direction)).join('');
+  }
+}
+
+// Auto-load on open
+window.addEventListener('DOMContentLoaded', () => loadData());
+</script>
+
+</body>
+</html>
