@@ -513,11 +513,11 @@ function buildRow(tx, direction, bscTx = null) {
   const vrAmt  = rawToVR(tx.total?.value || '0', tx.total?.decimals || '18');
   const fmtAmt = fmtVR(tx.total?.value || '0', tx.total?.decimals || '18');
   const usd    = fmtUSD(vrAmt);
-  const hash   = tx.transaction_hash || tx.tx_hash || '';
+  const hash   = tx.hash || tx.transaction_hash || tx.tx_hash || '';
 
-  // Sender / receiver
-  const sender    = (tx.from && tx.from.hash) ? tx.from.hash : '?';
-  const receiver  = (tx.to   && tx.to.hash)   ? tx.to.hash   : '?';
+  // Sender / receiver — API now returns plain strings, not {hash} objects
+  const sender    = (typeof tx.from === 'object' ? tx.from?.hash : tx.from) || '?';
+  const receiver  = (typeof tx.to   === 'object' ? tx.to?.hash   : tx.to)   || '?';
   const senderLbl = getLabel(sender);
   const recvLbl   = getLabel(receiver);
 
@@ -567,13 +567,14 @@ function buildRow(tx, direction, bscTx = null) {
 
 // ── Fetch from Blockscout ────────────────────────────
 async function fetchTransfers() {
-  // BUG FIX: Blockscout v2 uses token_contract_address_hash, not token=
-  const url = `${BLOCKSCOUT}/api/v2/addresses/${NTT_MANAGER}/token-transfers` +
-              `?token_contract_address_hash=${VR_TOKEN}&limit=50`;
+  const url = `${BLOCKSCOUT}/api/v2/addresses/${NTT_MANAGER}/token-transfers?type=ERC-20`;
   const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const json = await res.json();
-  return json.items || [];
+  const items = json.items || [];
+  return items.filter(tx =>
+    tx.token?.address_hash?.toLowerCase() === VR_TOKEN.toLowerCase()
+  );
 }
 
 // ── Fetch VR price from CoinGecko ───────────────────
@@ -614,12 +615,9 @@ async function loadData() {
     ]);
 
     // Split into OUT (to NTT) and IN (from NTT)
-    const outTxs = items.filter(tx =>
-      tx.to && tx.to.hash && tx.to.hash.toLowerCase() === NTT_MANAGER.toLowerCase()
-    );
-    const inTxs = items.filter(tx =>
-      tx.from && tx.from.hash && tx.from.hash.toLowerCase() === NTT_MANAGER.toLowerCase()
-    );
+    const addrOf = f => (typeof f === 'object' ? f?.hash : f) || '';
+    const outTxs = items.filter(tx => addrOf(tx.to).toLowerCase()   === NTT_MANAGER.toLowerCase());
+    const inTxs  = items.filter(tx => addrOf(tx.from).toLowerCase() === NTT_MANAGER.toLowerCase());
 
     const pairs = pairWithBsc(outTxs, bscMints);
 
