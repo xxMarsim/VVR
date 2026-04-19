@@ -195,6 +195,65 @@ tr:hover td { background: rgba(59,130,246,.025); }
 @keyframes shimmer { 0%{background-position:200%} 100%{background-position:-200%} }
 .skel-line { width: 100%; }
 
+/* ── ADDRESS LIST ────────────────────────────────────────── */
+.addr-section {
+  max-width: 1280px; margin: 0 auto;
+  padding: 0 20px 30px;
+}
+.addr-section-head {
+  font-size: 10px; font-weight: 700; color: #3b5068;
+  text-transform: uppercase; letter-spacing: .1em;
+  margin-bottom: 10px; padding-top: 4px;
+}
+.addr-table-wrap { overflow-x: auto; }
+.addr-table {
+  width: 100%; border-collapse: collapse;
+  background: #0b1018; border: 1px solid #1a2535; border-radius: 10px;
+  overflow: hidden;
+}
+.addr-table th {
+  text-align: left; padding: 8px 14px;
+  font-size: 9px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .05em; color: #64748b;
+  border-bottom: 1px solid #1a2535;
+  background: #0b1018;
+}
+.addr-table td {
+  padding: 9px 14px;
+  border-bottom: 1px solid rgba(26,37,53,.4);
+  font-size: 11px; vertical-align: middle;
+}
+.addr-table tr:last-child td { border-bottom: none; }
+.addr-table tr:hover td { background: rgba(59,130,246,.025); }
+.addr-chain-badge {
+  display: inline-block; padding: 2px 7px; border-radius: 20px;
+  font-size: 9px; font-weight: 700; letter-spacing: .04em; white-space: nowrap;
+}
+.chain-eth { background: #0e1e35; color: #3b82f6; border: 1px solid #1e3a5e; }
+.chain-bsc { background: #1a1500; color: #f0b90b; border: 1px solid #3a3000; }
+.addr-full {
+  font-family: 'SF Mono','Cascadia Code',monospace;
+  font-size: 10px; color: #94a3b8;
+  word-break: break-all;
+}
+.addr-links { display: flex; gap: 8px; white-space: nowrap; }
+.addr-link-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 8px; border-radius: 5px; font-size: 10px; font-weight: 600;
+  text-decoration: none; transition: filter .15s;
+}
+.addr-link-btn:hover { filter: brightness(1.25); }
+.lnk-blockscout { background: #0e1e35; color: #7eb8f7; border: 1px solid #1e3a5e; }
+.lnk-etherscan  { background: #0e2020; color: #5fcfcf; border: 1px solid #1a3a3a; }
+.lnk-bscscan    { background: #1a1500; color: #f0b90b; border: 1px solid #3a3000; }
+.copy-btn {
+  background: none; border: 1px solid #1e2e40; color: #64748b;
+  border-radius: 5px; padding: 3px 7px; font-size: 10px;
+  cursor: pointer; transition: all .15s;
+}
+.copy-btn:hover { border-color: #334e6a; color: #94a3b8; }
+.copy-btn.copied { color: #22c55e; border-color: #1a4a2a; }
+
 /* ── FOOTER NOTE ─────────────────────────────────────────── */
 .footer-note {
   text-align: center; padding: 10px 20px 24px;
@@ -719,6 +778,27 @@ tr:hover td { background: rgba(59,130,246,.025); }
   </div>
 </div>
 
+<!-- ══════════════════════════════════════════════════════
+     CONTRACT ADDRESS REFERENCE
+═════════════════════════════════════════════════════════ -->
+<div class="addr-section">
+  <div class="addr-section-head">Contract Addresses</div>
+  <div class="addr-table-wrap">
+    <table class="addr-table">
+      <thead>
+        <tr>
+          <th>Contract</th>
+          <th>Chain</th>
+          <th>Address</th>
+          <th>Links</th>
+        </tr>
+      </thead>
+      <tbody id="addrTableBody">
+      </tbody>
+    </table>
+  </div>
+</div>
+
 <div class="footer-note">
   Data: <a href="https://eth.blockscout.com" target="_blank">Blockscout ETH</a> ·
   Contracts: <a href="https://etherscan.io/address/0xC721f339fEC6aFe1C9adFc11E2ad2545aE26eA15" target="_blank">NTT Manager</a> ·
@@ -946,6 +1026,98 @@ async function init() {
 init();
 // Auto-refresh every 60s
 setInterval(init, 60000);
+
+// ── Contract Address Reference Table ─────────────────────
+(function buildAddrTable() {
+  const ADDRS = [
+    {
+      name: '$VR Token',
+      chain: 'ETH',
+      addr: '0xF775Bb63B1e6B30ebef4D42C10A54e8FF6a9DC22',
+      blockscout: 'https://eth.blockscout.com/address/0xF775Bb63B1e6B30ebef4D42C10A54e8FF6a9DC22',
+      explorer:   'https://etherscan.io/token/0xF775Bb63B1e6B30ebef4D42C10A54e8FF6a9DC22',
+      explorerLabel: 'Etherscan',
+      explorerClass: 'lnk-etherscan',
+    },
+    {
+      name: 'NTT Manager',
+      chain: 'ETH',
+      addr: '0xC721f339fEC6aFe1C9adFc11E2ad2545aE26eA15',
+      blockscout: 'https://eth.blockscout.com/address/0xC721f339fEC6aFe1C9adFc11E2ad2545aE26eA15',
+      explorer:   'https://etherscan.io/address/0xC721f339fEC6aFe1C9adFc11E2ad2545aE26eA15',
+      explorerLabel: 'Etherscan',
+      explorerClass: 'lnk-etherscan',
+    },
+    {
+      name: 'NTT Executor',
+      chain: 'ETH',
+      addr: '0xD2D9c936165a85F27a5a7e07aFb974D022B89463',
+      blockscout: 'https://eth.blockscout.com/address/0xD2D9c936165a85F27a5a7e07aFb974D022B89463',
+      explorer:   'https://etherscan.io/address/0xD2D9c936165a85F27a5a7e07aFb974D022B89463',
+      explorerLabel: 'Etherscan',
+      explorerClass: 'lnk-etherscan',
+    },
+    {
+      name: 'Wormhole Transceiver',
+      chain: 'ETH',
+      addr: '0x461169e7132bAF37a42aa0CDff597d7FC29D96e5',
+      blockscout: 'https://eth.blockscout.com/address/0x461169e7132bAF37a42aa0CDff597d7FC29D96e5',
+      explorer:   'https://etherscan.io/address/0x461169e7132bAF37a42aa0CDff597d7FC29D96e5',
+      explorerLabel: 'Etherscan',
+      explorerClass: 'lnk-etherscan',
+    },
+    {
+      name: 'Wormhole Core Bridge',
+      chain: 'ETH',
+      addr: '0x98f3c9e6E3fAce36bAAd05FE09d375Ef1464288B',
+      blockscout: 'https://eth.blockscout.com/address/0x98f3c9e6E3fAce36bAAd05FE09d375Ef1464288B',
+      explorer:   'https://etherscan.io/address/0x98f3c9e6E3fAce36bAAd05FE09d375Ef1464288B',
+      explorerLabel: 'Etherscan',
+      explorerClass: 'lnk-etherscan',
+    },
+    {
+      name: '$VR Token',
+      chain: 'BSC',
+      addr: '0x02C01ed6f17D8d2f13233d0b5447cdE7313209dE',
+      blockscout: null,
+      explorer:   'https://bscscan.com/token/0x02C01ed6f17D8d2f13233d0b5447cdE7313209dE',
+      explorerLabel: 'BscScan',
+      explorerClass: 'lnk-bscscan',
+    },
+  ];
+
+  const tbody = document.getElementById('addrTableBody');
+  if (!tbody) return;
+
+  tbody.innerHTML = ADDRS.map((row, i) => `
+    <tr>
+      <td style="font-size:12px;font-weight:600;white-space:nowrap;">${row.name}</td>
+      <td>
+        <span class="addr-chain-badge ${row.chain === 'ETH' ? 'chain-eth' : 'chain-bsc'}">
+          ${row.chain === 'ETH' ? 'Ethereum' : 'BSC'}
+        </span>
+      </td>
+      <td>
+        <span class="addr-full">${row.addr}</span>
+      </td>
+      <td>
+        <div class="addr-links">
+          ${row.blockscout ? `<a class="addr-link-btn lnk-blockscout" href="${row.blockscout}" target="_blank" rel="noopener">Blockscout ↗</a>` : ''}
+          <a class="addr-link-btn ${row.explorerClass}" href="${row.explorer}" target="_blank" rel="noopener">${row.explorerLabel} ↗</a>
+          <button class="copy-btn" data-addr="${row.addr}" onclick="copyAddr(this)">Copy</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+})();
+
+function copyAddr(btn) {
+  navigator.clipboard.writeText(btn.dataset.addr).then(() => {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1800);
+  });
+}
 </script>
 </body>
 </html>
